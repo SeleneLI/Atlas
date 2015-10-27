@@ -2,8 +2,7 @@
 # 本script功能：
 # 为分析Atlas自带的Built-in Measurements而写。针对不同probes ping 同一目的地，可以计算各自的平均值(mean)和方差(variance)；
 # 针对不同probes traceroute 同一目的地，可以计算各自的最常用路径的跳数(hops)
-# 但要注意的是此script处理得是一个measurement id仅表示一个probe ping一个dest得情况
-# 所以针对一个measurement id表示多个probes ping同一个dest参见另一个script
+# 此script处理得是针对一个measurement id 表示多个probes ping同一个dest
 __author__ = 'yueli'
 
 import json
@@ -16,19 +15,25 @@ from config.config import *
 
 # ==========================================Section: constant variable declaration======================================
 PROBE_DICT = {
+
+    "6118": "FranceIX",
     "13842": "mPlane",
+    "16958": "rmd",
     "22341": "LISP"
 }
 
-JSON_DIR = "/Users/qsong/Documents/atlas_ripe_net_associated_traces/"
+JSON_DIR = os.path.join(ATLAS_TRACES, 'Produced_traces', '4_probes_to_alexa_top100')
 # ======================================================================================================================
-def ping_traces_resume(mes_id, probe_id):
-    file_name = "RIPE-Atlas-measurement-{0}-probe-{1}.json".format(mes_id, probe_id)
-    file_path = os.path.join(JSON_DIR, file_name)
+def ping_traces_resume(mes_id, probes_id):
+    file_path = os.path.join(JSON_DIR, "{0}.json".format(mes_id))
     dst_addr = ""
     src_addr = ""
     avg_min = float('inf')
     std = float('inf')
+    rtt_probes_dict = {}
+    for probe in probes_id:
+        rtt_probes_dict[probe] = []
+
     with open(file_path) as f_handler:
         # The obtained 'json_data' is of type 'list'. Thus we can use list comprehension to generate the list of min
         # RTT value
@@ -40,13 +45,16 @@ def ping_traces_resume(mes_id, probe_id):
         # in python.
     if len(json_data) != 0:
         # Retrieve the min RTT for each ping and then get the average value
-        avg_min, std = np.mean([element['min'] for element in json_data]), np.std([element['min'] for element in json_data])
-        # We assume that all the records in a same JSON file have the same source @IP and destination @IP
-        src_addr = str(json_data[0]['src_addr'])
+        for element in json_data:
+            if element['src_addr'] in rtt_probes_dict.keys():
+                rtt_probes_dict[element['src_addr']].append(element['min'])
+
+    for key in rtt_probes_dict.keys():
+        rtt_probes_dict[key].append(np.mean(rtt_probes_dict[key]))
+        rtt_probes_dict[key].append(np.std(rtt_probes_dict[key]))
+
         dst_addr = str(json_data[0]["dst_addr"])
-        start_date = datetime.fromtimestamp(int(json_data[0]["timestamp"])).strftime('%Y-%m-%d %H:%M')
-        stop_date = datetime.fromtimestamp(int(json_data[-1]["timestamp"])).strftime('%Y-%m-%d %H:%M')
-    return src_addr, dst_addr, avg_min, std
+    return dst_addr, rtt_probes_dict
 
 
 
