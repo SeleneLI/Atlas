@@ -15,10 +15,17 @@ traces: A folder used to store the download traces, which can be further divied 
 Wenqing_codes: A static folder which will not be modified later, since the scripts in this folder are provided by Wenqing to give me a first look at the use of Atlas scripts. There are 3 basic scripts: ping-1.py -- to conduct a ping measuremnt with different parameters; fetch_result.py -- to dowload the experiment traces from Atlas website; plot_ping.py -- to plot a 3D figure associated with RTT of ping.
 
 Before executing the scripts, some environment variables should be added in ~/.bash_profile:
+
 export  ATLAS_ANALYZE_TRACES=$HOME/Documents/Codes/Atlas/analyze_traces
+
 export  ATLAS_CONDUCT_MEASUREMENTS=$HOME/Documents/Codes/Atlas/conduct_measurements
+
 export  ATLAS_FIGURES_AND_TABLES=$HOME/Documents/Codes/Atlas/figures_and_tables
+
 export  ATLAS_PLOT=$HOME/Documents/Codes/Atlas/plot
+
 export  ATLAS_TRACES=$HOME/Documents/Codes/Atlas/traces
+
 export  ATLAS_WENQIN_CODES=$HOME/Documents/Codes/Atlas/Wenqin_codes
+
 export  ATLAS_AUTH=$HOME/Documents/Codes/Atlas/auth
