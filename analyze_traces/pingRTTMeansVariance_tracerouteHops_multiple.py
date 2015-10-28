@@ -26,6 +26,7 @@ PROBE_ID_IP_DICT = {
 JSON_DIR = os.path.join(ATLAS_TRACES, 'Produced_traces', '4_probes_to_alexa_top100')
 # ======================================================================================================================
 def ping_traces_resume(mes_id, probe_ids):
+    # 要处理的traces来源
     file_path = os.path.join(JSON_DIR, "{0}.json".format(mes_id))
     dst_addr = ""
     src_addr = ""
@@ -52,9 +53,9 @@ def ping_traces_resume(mes_id, probe_ids):
 
     for key in rtt_probes_dict.keys():
         rtt_probes_dict[key].append(np.mean(rtt_probes_dict[key]))
-        # print "np.mean", rtt_probes_dict[key]
-        rtt_probes_dict[key].append(np.std(rtt_probes_dict[key]))
-        # print "np.std", rtt_probes_dict[key]
+        # 因为我们把means存在了 rtt_probes_dict[key] list中的最后一个元素，为了不影响下一行求std的结果，
+        # std的input范围应不包含list的最后一个元素即means值本身，[:-1] 即表示从list的第一个元素到倒数第二个元素
+        rtt_probes_dict[key].append(np.std(rtt_probes_dict[key][:-1]))
         dst_addr = str(json_data[0]["dst_addr"])
 
     return dst_addr, rtt_probes_dict
