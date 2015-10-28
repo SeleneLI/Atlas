@@ -14,24 +14,25 @@ from collections import Counter
 from config.config import *
 
 # ==========================================Section: constant variable declaration======================================
-PROBE_DICT = {
+PROBE_ID_IP_DICT = {
 
-    "6118": "FranceIX",
-    "13842": "mPlane",
-    "16958": "rmd",
-    "22341": "LISP"
+    "37.49.233.130": "6118",
+    "137.194.165.62": "13842",
+    "82.123.188.59": "16958",
+    "82.123.244.192": "16958",
+    "132.227.120.130": "22341"
 }
 
 JSON_DIR = os.path.join(ATLAS_TRACES, 'Produced_traces', '4_probes_to_alexa_top100')
 # ======================================================================================================================
-def ping_traces_resume(mes_id, probes_id):
+def ping_traces_resume(mes_id, probe_ids):
     file_path = os.path.join(JSON_DIR, "{0}.json".format(mes_id))
     dst_addr = ""
     src_addr = ""
     avg_min = float('inf')
     std = float('inf')
     rtt_probes_dict = {}
-    for probe in probes_id:
+    for probe in probe_ids:
         rtt_probes_dict[probe] = []
 
     with open(file_path) as f_handler:
@@ -46,14 +47,16 @@ def ping_traces_resume(mes_id, probes_id):
     if len(json_data) != 0:
         # Retrieve the min RTT for each ping and then get the average value
         for element in json_data:
-            if element['src_addr'] in rtt_probes_dict.keys():
-                rtt_probes_dict[element['src_addr']].append(element['min'])
+            if PROBE_ID_IP_DICT[element['from']] in rtt_probes_dict.keys():
+                rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(element['min'])
 
     for key in rtt_probes_dict.keys():
         rtt_probes_dict[key].append(np.mean(rtt_probes_dict[key]))
+        # print "np.mean", rtt_probes_dict[key]
         rtt_probes_dict[key].append(np.std(rtt_probes_dict[key]))
-
+        # print "np.std", rtt_probes_dict[key]
         dst_addr = str(json_data[0]["dst_addr"])
+
     return dst_addr, rtt_probes_dict
 
 
@@ -134,41 +137,69 @@ def generate_report(mes_ids, probe_ids, command, name):
                 a.writerow(output_row)
 
     if command == "PING":
-        report_name = "{0}_{1}_report.csv".format(command, name)
+        report_name = os.path.join(ATLAS_FIGURES_AND_TABLES, "{0}_{1}_report.csv".format(command, name))
         with open(report_name, 'wb') as f_handler:
             a = csv.writer(f_handler, dialect='excel', delimiter=";")
             a.writerow(
                 [
                     'mesurement id',
-                    'Ping to dst',
+                    'Destination',
                     'avg(min RTT) from LISP-Lab',
                     'avg(min RTT) from mPlane',
+                    'avg(min RTT) from FranceIX',
+                    'avg(min RTT) from rmd',
                     'variace from LISP-Lab',
-                    'variace from mPlane']
+                    'variace from mPlane',
+                    'variace from FranceIX',
+                    'variace from rmd']
             )
             for mes_id in mes_ids:
                 output_row = [mes_id]
-                src_addr_lisp, dst_addr, avg_min_lisp, std_lisp = ping_traces_resume(mes_id, probe_ids[0])
-                src_addr_mplane, dst_addr, avg_min_mplane, std_mplane = ping_traces_resume(mes_id, probe_ids[1])
+                dst_addr, rtt_probes_dict = ping_traces_resume(mes_id, probe_ids)
+                for key in rtt_probes_dict.keys():
+                    if key == '22341':
+                        avg_min_lispLab = rtt_probes_dict[key][-2]
+                        std_lispLab = rtt_probes_dict[key][-1]
+                    elif key == '13842':
+                        avg_min_mPlane = rtt_probes_dict[key][-2]
+                        std_mPlane = rtt_probes_dict[key][-1]
+                    elif key == '6118':
+                        avg_min_FranceIX = rtt_probes_dict[key][-2]
+                        std_FranceIX = rtt_probes_dict[key][-1]
+                    elif key == '16958':
+                        avg_min_rmd = rtt_probes_dict[key][-2]
+                        std_rmd = rtt_probes_dict[key][-1]
                 output_row.append(dst_addr)
-                output_row.append(avg_min_lisp)
-                output_row.append(avg_min_mplane)
-                output_row.append(std_lisp)
-                output_row.append(std_mplane)
+                output_row.append(avg_min_lispLab)
+                output_row.append(avg_min_mPlane)
+                output_row.append(avg_min_FranceIX)
+                output_row.append(avg_min_rmd)
+                output_row.append(std_lispLab)
+                output_row.append(std_mPlane)
+                output_row.append(std_FranceIX)
+                output_row.append(std_rmd)
                 a.writerow(output_row)
 
 
 if __name__ == "__main__":
+    # TRACEROUT_V4_MES_IDS = ['2841000', '2841002', '2841004', '2841006']
 
-    TRACEROUT_V4_MES_IDS = ['5017', '5018', '5019', '5020', '5021', '5022', '5024', '5025', '5025', '5026']
-    PROBE_IDS = ['22341', '13842']
-    generate_report(TRACEROUT_V4_MES_IDS, PROBE_IDS, "TRACEROUTE", "IPv4")
-    generate_report(['1017', '1019', '1020', '1022', '1026'], PROBE_IDS, "PING", "IPv4")
+    PING_V4_MES_IDS = []
+    PROBE_IDS = ['22341', '13842', '6118', '16958']
+    # generate_report(TRACEROUT_V4_MES_IDS, PROBE_IDS, "TRACEROUTE", "IPv4")
+    mes_id_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS,
+                                      '4_probes_to_alexa_top100', '4_top100_measurement_ids_ping.txt')
+    with open(mes_id_record_file) as f_handler:
+        PING_V4_MES_IDS = f_handler.readlines()
+    # 去掉跟在measurement id后面的换行符
+    PING_V4_MES_IDS = [i.strip() for i in PING_V4_MES_IDS]
+    print PING_V4_MES_IDS
+    generate_report(PING_V4_MES_IDS, PROBE_IDS, "PING", "IPv4")
 
-    TRACEROUT_V6_MES_IDS = ['6002', '6007', '6017', '6018', '6019', '6020', '6021', '6022']
-    PING_V6_MES_IDS = ['2017', '2019', '2020', '2022']
-    generate_report(TRACEROUT_V6_MES_IDS, PROBE_IDS, "TRACEROUTE", "IPv6")
-    generate_report(PING_V6_MES_IDS, PROBE_IDS, "PING", "IPv6")
+    # TRACEROUT_V6_MES_IDS = ['6002', '6007', '6017', '6018', '6019', '6020', '6021', '6022']
+    # PING_V6_MES_IDS = ['2017', '2019', '2020', '2022']
+    # generate_report(TRACEROUT_V6_MES_IDS, PROBE_IDS, "TRACEROUTE", "IPv6")
+    # generate_report(PING_V6_MES_IDS, PROBE_IDS, "PING", "IPv6")
 
 
 

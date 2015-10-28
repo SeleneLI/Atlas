@@ -1,5 +1,5 @@
-__author__ = 'yueli'
 # -*- coding: utf-8 -*-
+__author__ = 'yueli'
 '''In this python script, we plan to define some globl variables'''
 
 
