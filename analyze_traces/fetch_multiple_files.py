@@ -9,6 +9,24 @@ import os
 import sys
 from config.config import *
 
+# ==========================================Section: constant variable declaration======================================
+# probe id和此probe的IP地址间的对应关系
+PROBE_ID_IP_DICT = {
+
+    "37.49.233.130": "6118",
+    "137.194.165.62": "13842",
+    "82.123.188.59": "16958",
+    "82.123.244.192": "16958",
+    "132.227.120.130": "22341"
+}
+
+# EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的自文件夹名称
+# MEASUREMENT_ID_RECORD_FILE 为存储measurement id的.txt文档
+EXPERIMENT_NAME = '2_probes_Lyon_anchor'
+COMMAND = 'ping'
+# COMMAND = 'traceroute'
+MEASUREMENT_ID_RECORD_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME,'{0}_measurement_ids_{1}.txt'.format(EXPERIMENT_NAME,COMMAND))
+# ======================================================================================================================
 
 def downlod_trace(measurement_id):
 
@@ -32,15 +50,20 @@ if __name__ == "__main__":
     # 此处需要给出要下载的 measurement id 的来源，即 measurement id 在
     # $HOME/Documents/Codes/Atlas/conduct_measurements 之后存储的子文件夹名称 & 文件名
     # 这里的子文件夹名称会同时用作traces实际存储的路径子文件夹名
-    subfolder_name = '4_probes_to_alexa_top100'
-    file_name = '4_top100_measurement_ids.txt'
 
-    with open(os.path.join(ATLAS_CONDUCT_MEASUREMENTS, subfolder_name, file_name)) as f_handler:
+    with open(MEASUREMENT_ID_RECORD_FILE) as f_handler:
         for measurement_id in f_handler:
             id = measurement_id.strip()
-            file = os.path.join(ATLAS_TRACES, 'Produced_traces', subfolder_name, id+'.json')
+
+            # 检查是否有 EXPERIMENT_NAME 的文件夹存在在os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)，不存在的话creat
+            try:
+                os.stat(os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME))
+            except:
+                os.mkdir(os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME))
+
+            file = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}.json'.format(id))
             if os.path.exists(file):
-                print id + ".json has already existed in" + os.path.join(ATLAS_TRACES, 'Produced_traces', subfolder_name) + ", no need to download it again!!"
+                print id + ".json has already existed in" + os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME) + ", no need to download it again!!"
             else:
                 f = open(file, 'w')
                 f.write(downlod_trace(id).text)
