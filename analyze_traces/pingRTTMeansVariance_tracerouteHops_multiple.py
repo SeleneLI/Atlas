@@ -24,10 +24,10 @@ PROBE_ID_IP_DICT = {
     "132.227.120.130": "22341"
 }
 
-# EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的自文件夹名称
+# EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的子文件夹名称
 # TARGET_JSON_TRACES_DIR 为要分析的trace的path
 # ANALYZED_TRACE_FILE 为分析完要以.csv形式存储的文件path
-EXPERIMENT_NAME = '2_probes_Lyon_anchor'
+EXPERIMENT_NAME = '4_probes_to_alexa_top100'
 TARGET_JSON_TRACES_DIR = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)
 ANALYZED_TRACE_FILE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME)
 
@@ -35,7 +35,7 @@ ANALYZED_TRACE_FILE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME)
 # 定义本次实验所涉及到的probe id (PROBE_IDS)以及相关实验的measurement id (PING_V4_MES_IDS)，要么均以list形式直接给出
 # 要么会把纯id以每行一个的形式存在.txt文档里，由mes_id_ping_record_file调出进行处理后转换成list的形式赋值给PING_V4_MES_IDS
 # 在更改了probe后，还应在函数generate_report中更改相应的在.csv中要显示的和计算的信息
-PROBE_IDS = ['22341', '13842']
+PROBE_IDS = ['22341', '13842', '6118', '16958']
 # IPv4 -- ping
 # 以下方式二选一，一为直接给出list of probe id，二为读取.txt文档获得
 # PING_V4_MES_IDS = ['2841000', '2841002', '2841004', '2841006']
@@ -175,8 +175,8 @@ def generate_report(mes_ids, probe_ids, command, name):
             a.writerow(
                 [
                     'mesurement id', 'Destination',
-                    'avg(min RTT) from LISP-Lab', 'avg(min RTT) from mPlane',
-                    'variace from LISP-Lab', 'variace from mPlane']
+                    'avg(min RTT) from LISP-Lab', 'avg(min RTT) from mPlane', 'avg(min RTT) from FranceIX', 'avg(min RTT) from rmd',
+                    'variance from LISP-Lab', 'variance from mPlane', 'variance from FranceIX', 'variance from rmd']
             )
             for mes_id in mes_ids:
                 output_row = [mes_id]
@@ -200,12 +200,12 @@ def generate_report(mes_ids, probe_ids, command, name):
 
                 output_row.append(avg_min_lispLab)
                 output_row.append(avg_min_mPlane)
-                #output_row.append(avg_min_FranceIX)
-                #output_row.append(avg_min_rmd)
+                output_row.append(avg_min_FranceIX)
+                output_row.append(avg_min_rmd)
                 output_row.append(std_lispLab)
                 output_row.append(std_mPlane)
-                #output_row.append(std_FranceIX)
-                #output_row.append(std_rmd)
+                output_row.append(std_FranceIX)
+                output_row.append(std_rmd)
                 a.writerow(output_row)
 
     if command == "TRACEROUTE":
@@ -219,7 +219,8 @@ def generate_report(mes_ids, probe_ids, command, name):
         with open(report_name_traceroute, 'wb') as f_handler:
             a = csv.writer(f_handler, dialect='excel', delimiter=";")
             a.writerow(['mesurement id', 'target of traceroute',
-                        'hops number from LISP-Lab', 'hops number from mPlane'])
+                        'hops number from LISP-Lab', 'hops number from mPlane',
+                        'hops number from FranceIX', 'hops number from rmd'])
             for mes_id in mes_ids:
                 output_row = [mes_id]
                 dst_addr, hops_number_probes_dict = traceroute_traces_resume(mes_id, probe_ids)
@@ -237,8 +238,8 @@ def generate_report(mes_ids, probe_ids, command, name):
 
                 output_row.append(hops_number_LISPLab)
                 output_row.append(hops_number_mPlane)
-                #output_row.append(hops_number_FranceIX)
-                #output_row.append(hops_number_rmd)
+                output_row.append(hops_number_FranceIX)
+                output_row.append(hops_number_rmd)
                 a.writerow(output_row)
 
 
