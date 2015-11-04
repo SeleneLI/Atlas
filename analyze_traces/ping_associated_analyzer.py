@@ -6,6 +6,7 @@ __author__ = 'yueli'
 from config.config import *
 import numpy as np
 import re
+import math_tool as math_tool
 
 
 # ==========================================Section: constant variable declaration======================================
@@ -71,6 +72,7 @@ def minimum_rtt_calculator(targeted_file):
     min_rtt_dict = {}
     index__rtt_list = []
     index_probe_name_dict = {}
+    measurement_times = 0.0
 
     with open(targeted_file) as f_handler:
         for line in f_handler:
@@ -87,46 +89,23 @@ def minimum_rtt_calculator(targeted_file):
                         # index 和 probe name 的对应关系
                         index_probe_name_dict[index_rtt] = title.split(' ')[3].strip()
             else:
+                measurement_times += 1
                 min_rtt_list = []
-                # 在每行中，都需要对目标列进行循环，把数值依次写入可记录variance的字典中
+                # 在每行中，都需要对每个目标probe所产生的最小 RTT 依次写入可记录 min_rtt 的字典中
                 for index in index__rtt_list:
                     min_rtt_list.append(float(line.split(';')[index].strip()))
                 # 挑出4个probe ping同一dest时（即：每行中）RTT最小的那个
-                for index in minimum_value_index_explorer(min_rtt_list):
+                for index in math_tool.minimum_value_index_explorer(min_rtt_list):
                     min_rtt_dict[index_probe_name_dict[index + index__rtt_list[0]]] += 1
-                # min_rtt_dict[index_probe_name_dict[min_rtt_list.index(min(min_rtt_list)) + index__rtt_list[0]]] += 1
+
+    # 如果只想知道每个 probe 所对应的 RTT 最小的次数，那就注释掉这一步；
+    # 如果想知道每个 probe 所对应的 RTT 最小的次数所占百分比，那就通过这一步来计算
+    # format(小数, '.2%') 表示把小数转换成对应的百分比，小数点后留2位。
+    # 由于 measurement_times 在之前直接定义成float格式，所以此处不用担心 int/int 而只能得到整数 0 的情况
+    for key in min_rtt_dict:
+        min_rtt_dict[key] = format(min_rtt_dict[key] / measurement_times, '.2%')
 
     return min_rtt_dict
-
-
-# ======================================================================================================================
-# 此函数会返回一个list中最小值的一个或多个index，
-# e.g.: a = [1.0, 2.0, 3.0, 4.0]，则会返回[0]；a = [1.0, 1.0, 3.0, 4.0]，则会返回[0, 1]；a = [1.0, 1.0, 1.0, 1.0]，则会返回[0, 1, 2, 3]；
-# input: 含有要处理数据的list
-# output: list中最小值的index所组成的list
-def minimum_value_index_explorer(target_list):
-
-    # 在 target_list 中挑出有相同数值所对应的 index 而组成的list
-    identical_elements_value_list = [value for index, value in enumerate(target_list) if target_list.count(value) > 1]
-    identical_elements_index_list = [index for index, value in enumerate(target_list) if target_list.count(value) > 1]
-
-    # 如果 identical_elements_value_list is None
-    if len(identical_elements_value_list) == 0:
-        print [target_list.index(min(target_list))]
-        return [target_list.index(min(target_list))]
-    # 如果 identical_elements_value_list is not None
-    else:
-        # 如果 identical_elements_value_list 中的元素 不是 target_list 中的最小值
-        # 那就直接返回 target_list 最小值的index即可
-        if identical_elements_value_list[0] != min(target_list):
-            print [target_list.index(min(target_list))]
-            return [target_list.index(min(target_list))]
-        # 如果 identical_elements_value_list 中的元素 就是 target_list 中的最小值
-        # 那就需要返回 identical_elements_index_list，因为它记录了多个最小值的 index 的 list
-        else:
-            print identical_elements_index_list
-            return identical_elements_index_list
-
 
 
 
