@@ -33,7 +33,6 @@ def minimum_hops_calculator(targeted_file):
     min_hops_dict = {}
     index__hops_list = []
     index_probe_name_dict = {}
-    measurement_times = 0.0
 
     with open(targeted_file) as f_handler:
         for line in f_handler:
@@ -50,7 +49,6 @@ def minimum_hops_calculator(targeted_file):
                         # index 和 probe name 的对应关系
                         index_probe_name_dict[index_hops] = title.split(' ')[3].strip()
             else:
-                measurement_times += 1
                 min_hops_list = []
                 # 在每行中，都需要对每个目标probe所产生的hops数值依次写入可记录 min_hops 的字典中
                 for index in index__hops_list:
@@ -59,12 +57,17 @@ def minimum_hops_calculator(targeted_file):
                 for index in math_tool.minimum_value_index_explorer(min_hops_list):
                     min_hops_dict[index_probe_name_dict[index + index__hops_list[0]]] += 1
 
-    # 如果只想知道每个 probe 所对应的 RTT 最小的次数，那就注释掉这一步；
-    # 如果想知道每个 probe 所对应的 RTT 最小的次数所占百分比，那就通过这一步来计算
-    # format(小数, '.2%') 表示把小数转换成对应的百分比，小数点后留2位
-    # 由于 measurement_times 在之前直接定义成float格式，所以此处不用担心 int/int 而只能得到整数 0 的情况
+    # 如果只想知道每个 probe 所对应的 hops 最小的次数，那就注释掉这一步；
+    # 如果想知道每个 probe 所对应的 hops 最小的次数所占百分比，那就通过这一步来计算
+    # format(小数, '.2%') 表示把小数转换成对应的百分比，小数点后留2位。
+    # 鉴于有可能存在几个 probe ping 同一个 dest 时 RTT 是相同的情况，所以算百分比时不能单纯的只除以 measurement 次数，
+    # 而需要除以每个 probe 所对应的 hops 最小次数的总和
+    total_rtt_times = float(sum(min_hops_dict.values()))
     for key in min_hops_dict:
-        min_hops_dict[key] = format(min_hops_dict[key] / measurement_times, '.2%')
+        # 若只 run 本 script，可用下语句直接表示出百分比结果，e.g.: 46.00%
+        # min_hops_dict[key] = format(min_hops_dict[key] / measurement_times, '.2%')
+        # 若此函数被调用来画图，则需注释掉上面语句而用下面语句，结果仅显示百分比的数字部分而不加百分号，即：46.00
+        min_hops_dict[key] = round(min_hops_dict[key] / total_rtt_times * 100, 2)
 
     return min_hops_dict
 

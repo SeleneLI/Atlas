@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # 本script功能：
-# 基于 $HOME/Documents/Codes/Atlas/figures_and_tables 中存储的各实验下的PING_IPv4_report.csv文件而进行的更深入分析
+# 定义了一些基本的数学方面运算函数，供别的 script 调用
 __author__ = 'yueli'
 
 from config.config import *
