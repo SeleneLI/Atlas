@@ -24,13 +24,13 @@ PROBE_NAME_ID_DICT = {
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '4_probes_to_alexa_top100' # Needs to change
-TARGET_CSV_NAME = 'PING_IPv4_report.csv' # Needs to change
+TARGET_CSV_NAME = 'TRACEROUTE_IPv4_report.csv' # Needs to change
 TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, TARGET_CSV_NAME)
 
 # The title shown on the figure
-FIGURE_TITLE = "Percentage of every probe's minimum RTT" # Needs to change
+# FIGURE_TITLE = "Percentage of every probe's minimum RTT" # Needs to change
 # The full path and figure name
-FIGURE_PATH_NAME = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'Percentage_every_probe_minimum_rtt.eps') # Needs to change
+FIGURE_PATH_NAME = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'Percentage_every_probe_minimum_hops_number.eps') # Needs to change
 # 需要根据最终Pie图有几部分而分配几种颜色
 COLORS = ['red', 'green', 'yellow', 'lightskyblue'] # Maybe needs to change
 # 最终 Pie 图有几部分写几个0。此处表示扇形和扇形之间的距离，如果均为0则表示各扇形间无缝相连
@@ -51,7 +51,7 @@ def plot_pie_figure(list_to_plot):
                     # everything is rotated counter-clockwise by 90 degrees,
                     # so the plotting starts on the positive y-axis.
 
-    plt.title(FIGURE_TITLE)
+    # plt.title(FIGURE_TITLE)
     plt.savefig(FIGURE_PATH_NAME)
     plt.show()
 

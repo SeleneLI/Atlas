@@ -27,7 +27,7 @@ PROBE_ID_IP_DICT = {
 # EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的子文件夹名称
 # TARGET_JSON_TRACES_DIR 为要分析的trace的path
 # ANALYZED_TRACE_FILE 为分析完要以.csv形式存储的文件path
-EXPERIMENT_NAME = '4_probes_to_alexa_top100'
+EXPERIMENT_NAME = '4_probes_to_alexa_top50'
 TARGET_JSON_TRACES_DIR = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)
 ANALYZED_TRACE_FILE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME)
 
@@ -78,10 +78,10 @@ def ping_traces_resume(mes_id, probe_ids):
                 rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(element['min'])
 
     for key in rtt_probes_dict.keys():
-        rtt_probes_dict[key].append(np.mean(rtt_probes_dict[key]))
+        rtt_probes_dict[key].append(round(np.mean(rtt_probes_dict[key]), 2))
         # 因为我们把means存在了 rtt_probes_dict[key] list中的最后一个元素，为了不影响下一行求std的结果，
         # std的input范围应不包含list的最后一个元素即means值本身，[:-1] 即表示从list的第一个元素到倒数第二个元素
-        rtt_probes_dict[key].append(np.std(rtt_probes_dict[key][:-1]))
+        rtt_probes_dict[key].append(round(np.std(rtt_probes_dict[key][:-1]), 2))
         dst_addr = str(json_data[0]["dst_addr"])
 
     return dst_addr, rtt_probes_dict
@@ -245,7 +245,7 @@ def generate_report(mes_ids, probe_ids, command, name):
 
 if __name__ == "__main__":
     generate_report(PING_V4_MES_IDS, PROBE_IDS, "PING", "IPv4")
-    generate_report(TRACEROUTE_V4_MES_IDS, PROBE_IDS, "TRACEROUTE", "IPv4")
+    # generate_report(TRACEROUTE_V4_MES_IDS, PROBE_IDS, "TRACEROUTE", "IPv4")
 
     # TRACEROUT_V6_MES_IDS = ['6002', '6007', '6017', '6018', '6019', '6020', '6021', '6022']
     # PING_V6_MES_IDS = ['2017', '2019', '2020', '2022']

@@ -21,7 +21,7 @@ PROBE_NAME_ID_DICT = {
 
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
-EXPERIMENT_NAME = '4_probes_to_alexa_top100'
+EXPERIMENT_NAME = '4_probes_to_alexa_top50'
 TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report.csv')
 
 # ======================================================================================================================
@@ -112,5 +112,5 @@ def minimum_rtt_calculator(targeted_file):
 
 
 if __name__ == "__main__":
-    # print means_of_variance_calculator(TARGET_CSV_TRACES)
+    print means_of_variance_calculator(TARGET_CSV_TRACES)
     print minimum_rtt_calculator(TARGET_CSV_TRACES)
