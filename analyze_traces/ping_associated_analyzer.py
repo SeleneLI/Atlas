@@ -64,7 +64,7 @@ def means_of_variance_calculator(targeted_file):
 
 
 # ======================================================================================================================
-# 此函数会挑出4个probes ping 同一个dest时RTT最小的那个probe
+# 此函数会挑出4个probes ping 同一个dest时平均RTT最小的那个probe
 # 针对 target file 计算出每个probe共有多少次是RTT最小的，最后除以ping过的dest数求出百分比
 # input: targeted_file
 # output: dict={'probe_name': RTT最小的次数（或百分比）}
@@ -109,6 +109,16 @@ def minimum_rtt_calculator(targeted_file):
         min_rtt_dict[key] = round(min_rtt_dict[key] / total_rtt_times * 100, 2)
 
     return min_rtt_dict
+
+# ======================================================================================================================
+# 此函数会挑出4个probes ping 同一个dest时每一时刻的RTT最小的那个probe
+# 针对 target file 计算出每个probe共有多少次是RTT最小的，最后除以ping过的dest数求出百分比
+# input: targeted_file
+# output: dict={'probe_name': RTT最小的次数（或百分比）}
+def probes_dest_min_rtt_percentage(targeted_file):
+
+    return None
+
 
 
 if __name__ == "__main__":
