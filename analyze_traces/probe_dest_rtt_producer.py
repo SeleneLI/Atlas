@@ -61,44 +61,47 @@ def json_file_finder(file_string):
 # 存在 $HOME/Documents/Codes/Atlas/traces/json2csv/EXPERIMENT_NAME.csv 中
 # input = .json file
 # output = .csv file
-def probes_dest_rtt_csv_producer(target_file, stored_file):
+def probes_dest_rtt_csv_producer(target_files, stored_file):
     # 检查是否有 JSON2CSV_FILE 存在，不存在的话creat
     try:
         os.stat(os.path.join(ATLAS_TRACES, 'json2csv'))
     except:
         os.mkdir(os.path.join(ATLAS_TRACES, 'json2csv'))
 
-    if len(target_file) == 0:
+    if len(target_files) == 0:
         return "There is no .json file as input"
-    elif len(target_file) == 1:
-        with open(target_file[0]) as f_handler:
-            json_data = json.load(f_handler)
-            dest = destination_finder(json_data)
-            probes =  probes_finder(json_data)
-            rtts_probes = rtt_finder(probes_finder(json_data), json_data)
-            experiment_number = len(json_data)/len(probes)
 
-            with open(stored_file, 'wb') as f_handler:
-                a = csv.writer(f_handler, dialect='excel', delimiter=";")
-                title = ['destination', 'probe']
-                for i in range(experiment_number):
-                    title.append('{0}_min/avg/max'.format(i+1))
-                a.writerow(title)
+    else:
+        # 打开一个 .csv file
+        with open(stored_file, 'wb') as csv_handler:
+            a = csv.writer(csv_handler, dialect='excel', delimiter=";")
+            title = ['destination', 'probe']
 
-                for probe in probes:
-                    rtts = [dest, PROBE_NAME_ID_DICT[str(probe)]]
-                    for rtt in rtts_probes[probe]:
-                        rtts.append(rtt)
-                    a.writerow(rtts)
+            # 先用第一个 .json file 写 .csv file 的 title
+            with open(target_files[0]) as json_handler:
+                json_data = json.load(json_handler)
+                probes =  probes_finder(json_data)
+                experiment_number = len(json_data)/len(probes)
+
+            for i in range(experiment_number):
+                title.append('{0}_min/avg/max'.format(i+1))
+            a.writerow(title)
+
+            # 依次读入需要写入的 .json file，把需要的 rtt 的3个值都写入 .csv file
+            for target_file in target_files:
+                with open(target_file) as f_handler:
+                    json_data = json.load(f_handler)
+                    dest = destination_finder(json_data)
+                    probes =  probes_finder(json_data)
+                    rtts_probes = rtt_finder(probes_finder(json_data), json_data)
+
+                    for probe in probes:
+                        rtts = [dest, PROBE_NAME_ID_DICT[str(probe)]]
+                        for rtt in rtts_probes[probe]:
+                            rtts.append(rtt)
+                        a.writerow(rtts)
 
 
-
-
-    else: # TBD!!!!一个file list的输入时怎么办
-        for target_file in target_file:
-
-
-    return json_data
 
 
 
@@ -153,7 +156,5 @@ def rtt_finder(probes, json_data):
 
 
 if __name__ == "__main__":
-    print json_file_finder(PING_MEASUREMENT_ID_LIST)
-    # print json_file_finder('2841000.json')
-    # print probes_dest_rtt_csv_producer(json_file_finder('2841000.json'), JSON2CSV_FILE)
-    # print probes_dest_rtt_csv_producer(json_file_finder(PING_MEASUREMENT_ID_LIST), JSON2CSV_FILE)
+    # probes_dest_rtt_csv_producer(json_file_finder('2841097.json'), JSON2CSV_FILE)
+    probes_dest_rtt_csv_producer(json_file_finder(PING_MEASUREMENT_ID_LIST), JSON2CSV_FILE)
