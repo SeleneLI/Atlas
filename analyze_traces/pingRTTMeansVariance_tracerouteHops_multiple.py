@@ -210,7 +210,7 @@ def generate_report(mes_ids, probe_ids, command, name):
 
     if command == "TRACEROUTE":
         report_name_traceroute = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report.csv".format(command, name))
-        # 检查是否有 os.path.join(ANALYZED_TRACE_FILE) 存在，部存在的话creat
+        # 检查是否有 os.path.join(ANALYZED_TRACE_FILE) 存在，不存在的话creat
         try:
             os.stat(os.path.join(ANALYZED_TRACE_FILE))
         except:
