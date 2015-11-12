@@ -75,7 +75,7 @@ def ping_traces_resume(mes_id, probe_ids):
         # Retrieve the min RTT for each ping and then get the average value
         for element in json_data:
             if PROBE_ID_IP_DICT[element['from']] in rtt_probes_dict.keys():
-                rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(element['min'])
+                rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(element['avg'])
 
     for key in rtt_probes_dict.keys():
         rtt_probes_dict[key].append(round(np.mean(rtt_probes_dict[key]), 2))
@@ -163,7 +163,7 @@ def generate_report(mes_ids, probe_ids, command, name):
     """
 
     if command == "PING":
-        report_name_ping = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report.csv".format(command, name))
+        report_name_ping = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report_avg.csv".format(command, name))
         # 检查是否有 os.path.join(ANALYZED_TRACE_FILE) 存在，部存在的话creat
         try:
             os.stat(os.path.join(ANALYZED_TRACE_FILE))
@@ -175,7 +175,7 @@ def generate_report(mes_ids, probe_ids, command, name):
             a.writerow(
                 [
                     'mesurement id', 'Destination',
-                    'avg(min RTT) from LISP-Lab', 'avg(min RTT) from mPlane', 'avg(min RTT) from FranceIX', 'avg(min RTT) from rmd',
+                    'avg(avg RTT) from LISP-Lab', 'avg(avg RTT) from mPlane', 'avg(avg RTT) from FranceIX', 'avg(avg RTT) from rmd',
                     'variance from LISP-Lab', 'variance from mPlane', 'variance from FranceIX', 'variance from rmd']
             )
             for mes_id in mes_ids:
