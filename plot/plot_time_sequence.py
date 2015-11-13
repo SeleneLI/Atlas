@@ -30,11 +30,15 @@ TARGET_CSV_TRACES = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPE
 # 因为要从 TARGET_CSV_TRACES 中一下生成 destination 数目个 figure，所以此处是定义出要存 figure 的路径，
 # 具体名称在生成图的时候按照 destination 给出
 FIGURE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'time_sequence')  # Needs to change
-RTT_TYPE = 'avg'
+RTT_TYPE = 'avg'    # 'min' or 'avg' or 'max'
 X_LABEL = 'experiment number'
 Y_LABEL = 'rtt (ms)'
 FONTSIZE = 20
 
+# Plot 时的参考变量
+# 如果是 n 个 probes 对同一 destination 而产生的与 destination 数量一致的 figure 数，输入：'dest'
+# 如果是 1 个 probe 对所有 destinations 而产生的与 probes 数量一致的 figure 数，输入：'probe'
+GENERATE_VARIABLE = 'dest'  # 'dest' or 'probe'
 
 # ======================================================================================================================
 # 此函数可以根据给出的字典画出时间序列图
@@ -53,20 +57,15 @@ def plot_time_sequence(probes_rtt_dict, target_variable):
     plt.xlim(1, x_length)
     plt.xlabel(X_LABEL, fontsize = FONTSIZE)
     plt.ylabel(Y_LABEL, fontsize = FONTSIZE)
-    plt.legend(loc='best')
+    # plt.legend(loc='best')
 
     # 检查是否有 os.path.join(FIGURE_PATH, RTT_TYPE) 存在，不存在的话creat
     try:
-        os.stat(os.path.join(FIGURE_PATH))
-    except:
-        os.mkdir(os.path.join(FIGURE_PATH))
-
-    try:
         os.stat(os.path.join(FIGURE_PATH, RTT_TYPE))
     except:
-        os.mkdir(os.path.join(FIGURE_PATH, RTT_TYPE))
+        os.makedirs(os.path.join(FIGURE_PATH, RTT_TYPE))
 
-    plt.savefig(os.path.join(FIGURE_PATH, RTT_TYPE, '{0}.eps'.format(target_variable)))
+    plt.savefig(os.path.join(FIGURE_PATH, RTT_TYPE, '{0}.eps'.format(target_variable)), dpi=300)
     # 每画一次图一定要 close 掉 ！！否则会不停叠加 ！！
     plt.close()
 
@@ -96,7 +95,7 @@ def probes_rtt_dict_finder(target_file, target_dest, type_rtt):
                     elif type_rtt == 'max':
                         probes_rtt_dict[line.split(';')[1]].append(rtt_list[2])
                     else:
-                        print "Wrong RTT type !!"
+                        print "Wrong RTT type !! It should be 'min', 'avg' or 'max'"
 
     return probes_rtt_dict
 
@@ -127,7 +126,7 @@ def destinations_rtt_dict_finder(target_file, target_probe, type_rtt):
                     elif type_rtt == 'max':
                         destinations_rtt_dict[line.split(';')[0]].append(rtt_list[2])
                     else:
-                        print "Wrong RTT type !!"
+                        print "Wrong RTT type !! It should be 'min', 'avg' or 'max'"
 
     return destinations_rtt_dict
 
@@ -161,9 +160,10 @@ def get_probe_list(target_file):
     return list(set(probe_list))
 
 if __name__ == "__main__":
-    for dest in get_dest_list(TARGET_CSV_TRACES):
-        plot_time_sequence(probes_rtt_dict_finder(TARGET_CSV_TRACES, dest, RTT_TYPE), dest)
-
-    # for probe in get_probe_list(TARGET_CSV_TRACES):
-    #     plot_time_sequence(destinations_rtt_dict_finder(TARGET_CSV_TRACES, probe, RTT_TYPE), probe)
+    if GENERATE_VARIABLE == 'dest':
+        for dest in get_dest_list(TARGET_CSV_TRACES):
+            plot_time_sequence(probes_rtt_dict_finder(TARGET_CSV_TRACES, dest, RTT_TYPE), dest)
+    elif GENERATE_VARIABLE == 'probe':
+        for probe in get_probe_list(TARGET_CSV_TRACES):
+            plot_time_sequence(destinations_rtt_dict_finder(TARGET_CSV_TRACES, probe, RTT_TYPE), probe)
 

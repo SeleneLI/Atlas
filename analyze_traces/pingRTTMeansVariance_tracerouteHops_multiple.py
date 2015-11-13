@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # 本script功能：
-# 为分析Atlas自带的Built-in Measurements而写。针对不同probes ping 同一目的地，可以计算各自的平均值(mean)和方差(variance)；
+# 为分析Atlas的 traces 而写。针对不同probes ping 同一目的地，可以计算各自的平均值(mean)和方差(variance)；
 # 针对不同probes traceroute 同一目的地，可以计算各自的最常用路径的跳数(hops)
 # 此script处理得是针对一个measurement id 表示多个probes ping同一个dest
 __author__ = 'yueli'
@@ -31,27 +31,46 @@ EXPERIMENT_NAME = '4_probes_to_alexa_top50'
 TARGET_JSON_TRACES_DIR = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)
 ANALYZED_TRACE_FILE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME)
 
+# 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
+GENERATE_TYPE = 'PING'  # 'PING' or 'TRACEROUTE'
+IP_VERSION = 'IPv4'  # 'IPv6'
+RTT_TYPE = 'min'    # 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
+MES_ID_TYPE = 'txt'     # 'list' or 'txt'
+MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
 
-# 定义本次实验所涉及到的probe id (PROBE_IDS)以及相关实验的measurement id (PING_V4_MES_IDS)，要么均以list形式直接给出
-# 要么会把纯id以每行一个的形式存在.txt文档里，由mes_id_ping_record_file调出进行处理后转换成list的形式赋值给PING_V4_MES_IDS
-# 在更改了probe后，还应在函数generate_report中更改相应的在.csv中要显示的和计算的信息
-PROBE_IDS = ['22341', '13842', '6118', '16958']
-# IPv4 -- ping
-# 以下方式二选一，一为直接给出list of probe id，二为读取.txt文档获得
-# PING_V4_MES_IDS = ['2841000', '2841002', '2841004', '2841006']
-mes_id_ping_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_measurement_ids_ping.txt'.format(EXPERIMENT_NAME))
-with open(mes_id_ping_record_file) as f_handler:
-    PING_V4_MES_IDS = [i.strip() for i in f_handler.readlines()] # .strip()用于去掉跟在measurement id后面的换行符
-
-# IPv4 -- traceroute
-# 以下方式二选一，一为直接给出list of probe id，二为读取.txt文档获得
-# TRACEROUTE_V4_MES_IDS = ['2841001', '2841003', '2841005', '2841007']
-mes_id_traceroute_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_measurement_ids_traceroute.txt'.format(EXPERIMENT_NAME))
-with open(mes_id_traceroute_record_file) as f_handler:
-    TRACEROUTE_V4_MES_IDS = [i.strip() for i in f_handler.readlines()] # .strip()用于去掉跟在measurement id后面的换行符
 
 # ======================================================================================================================
-def ping_traces_resume(mes_id, probe_ids):
+# 此函数从只存有 measurement_id 的.txt文档里读出所有的 measurement_id 以 list 形式返回
+def get_measurement_id_list(generate_type, mes_id_type):
+    if mes_id_type == 'txt':
+        if generate_type == 'PING':
+            mes_id_ping_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_measurement_ids_ping.txt'.format(EXPERIMENT_NAME))
+            with open(mes_id_ping_record_file) as f_handler:
+                PING_V4_MES_IDS = [i.strip() for i in f_handler.readlines()] # .strip()用于去掉跟在measurement id后面的换行符
+            return PING_V4_MES_IDS
+        elif generate_type == 'TRACEROUTE':
+            mes_id_traceroute_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_measurement_ids_traceroute.txt'.format(EXPERIMENT_NAME))
+            with open(mes_id_traceroute_record_file) as f_handler:
+                TRACEROUTE_V4_MES_IDS = [i.strip() for i in f_handler.readlines()] # .strip()用于去掉跟在measurement id后面的换行符
+            return TRACEROUTE_V4_MES_IDS
+
+    elif mes_id_type == 'list':
+        return MES_ID_LIST
+
+    else:
+        print "Wrong MES_ID_TYPE !! It should be 'list' or 'txt'"
+
+
+
+# ======================================================================================================================
+# 此函数按照 measurement_id 和 probe_id 以及 RTT 类型把针对某一 dest 的各 probe 的 rtt 按照字典形式表示出来
+# input = measurement_id, probe_id 和 RTT type
+# output = dest, {'probe_1': [rtt_1, rtt_2, rtt_3, ...],
+#                 'probe_2': [rtt_1, rtt_2, rtt_3, ...],
+#                 'probe_3': [rtt_1, rtt_2, rtt_3, ...],
+#                 'probe_4': [rtt_1, rtt_2, rtt_3, ...]
+#                 }
+def ping_traces_resume(mes_id, probe_ids, rtt_type):
     # 要处理的traces来源
     file_name = os.path.join(TARGET_JSON_TRACES_DIR, "{0}.json".format(mes_id))
     dst_addr = ""
@@ -72,10 +91,16 @@ def ping_traces_resume(mes_id, probe_ids):
         # In addition, in case of empty input file, the retured dictionary is empty, which is equivalent to 'False'
         # in python.
     if len(json_data) != 0:
-        # Retrieve the min RTT for each ping and then get the average value
+        # Retrieve the min/avg/max RTT for each ping and then get the average value
         for element in json_data:
             if PROBE_ID_IP_DICT[element['from']] in rtt_probes_dict.keys():
-                rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(element['avg'])
+                # QP：如果‘avg’的值为不为-1，那么我们把'avg'的value存到list里
+                if element[rtt_type] != -1:
+                    rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(element[rtt_type])
+                # QP：如果为-1，那么我们则添加一个0到list里面，一则是避免出现list最后为empty的情况
+                # QP：因为对empty list调用np.mean(), 会发出警告， 二则是避免-1对平均值的影响
+                else:
+                    rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(0)
 
     for key in rtt_probes_dict.keys():
         rtt_probes_dict[key].append(round(np.mean(rtt_probes_dict[key]), 2))
@@ -145,6 +170,7 @@ def traceroute_traces_resume(mes_id, probe_ids):
     # http://customer.xfinity.com/help-and-support/internet/run-traceroute-command/ 该Link 对某一行中偶尔出现的星号
     # 进行了解释, 简单来说就是，如果 originator 在 规定的timeout时间内没有收到回复，则输出星号，表示没有收到回复。
 
+
 def retrieve_traversed_ip(results):
     """
         Retrive the traversed IP address from a given list of dictionary
@@ -157,13 +183,13 @@ def retrieve_traversed_ip(results):
     return res
 
 
-def generate_report(mes_ids, probe_ids, command, name):
+def generate_report(mes_ids, probe_ids, command, name, rtt_type):
     """
         Given a list of mesurement id and a list of probe id, generate a report of format CSV
     """
 
     if command == "PING":
-        report_name_ping = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report_avg.csv".format(command, name))
+        report_name_ping = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report_{2}.csv".format(command, name, rtt_type))
         # 检查是否有 os.path.join(ANALYZED_TRACE_FILE) 存在，部存在的话creat
         try:
             os.stat(os.path.join(ANALYZED_TRACE_FILE))
@@ -180,7 +206,7 @@ def generate_report(mes_ids, probe_ids, command, name):
             )
             for mes_id in mes_ids:
                 output_row = [mes_id]
-                dst_addr, rtt_probes_dict = ping_traces_resume(mes_id, probe_ids)
+                dst_addr, rtt_probes_dict = ping_traces_resume(mes_id, probe_ids, rtt_type)
                 output_row.append(dst_addr)
                 avg_min_lispLab = avg_min_mPlane = avg_min_FranceIX = avg_min_rmd = \
                     std_lispLab = std_mPlane = std_FranceIX = std_rmd = 0
@@ -244,13 +270,12 @@ def generate_report(mes_ids, probe_ids, command, name):
 
 
 if __name__ == "__main__":
-    generate_report(PING_V4_MES_IDS, PROBE_IDS, "PING", "IPv4")
-    # generate_report(TRACEROUTE_V4_MES_IDS, PROBE_IDS, "TRACEROUTE", "IPv4")
-
-    # TRACEROUT_V6_MES_IDS = ['6002', '6007', '6017', '6018', '6019', '6020', '6021', '6022']
-    # PING_V6_MES_IDS = ['2017', '2019', '2020', '2022']
-    # generate_report(TRACEROUT_V6_MES_IDS, PROBE_IDS, "TRACEROUTE", "IPv6")
-    # generate_report(PING_V6_MES_IDS, PROBE_IDS, "PING", "IPv6")
+    if GENERATE_TYPE == 'PING':
+        generate_report(get_measurement_id_list(GENERATE_TYPE, MES_ID_TYPE), PROBE_ID_IP_DICT.values(), GENERATE_TYPE, IP_VERSION, RTT_TYPE)
+    elif GENERATE_TYPE == 'TRACEROUTE':
+        generate_report(get_measurement_id_list(GENERATE_TYPE, MES_ID_TYPE), PROBE_ID_IP_DICT.values(), GENERATE_TYPE, IP_VERSION, "")
+    else:
+        print "Generate type should be 'PING' or 'TRACEROUTE' !!"
 
 
 
