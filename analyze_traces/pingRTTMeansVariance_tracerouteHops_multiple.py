@@ -34,13 +34,15 @@ ANALYZED_TRACE_FILE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME)
 # 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
 GENERATE_TYPE = 'PING'  # 'PING' or 'TRACEROUTE'
 IP_VERSION = 'IPv4'  # 'IPv6'
-RTT_TYPE = 'min'    # 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
+RTT_TYPE = 'max'    # 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
 MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
 
 
 # ======================================================================================================================
 # 此函数从只存有 measurement_id 的.txt文档里读出所有的 measurement_id 以 list 形式返回
+# input = ('PING' or 'TRACEROUTE', list' or 'txt')
+# output = list of measurement id
 def get_measurement_id_list(generate_type, mes_id_type):
     if mes_id_type == 'txt':
         if generate_type == 'PING':
@@ -94,11 +96,11 @@ def ping_traces_resume(mes_id, probe_ids, rtt_type):
         # Retrieve the min/avg/max RTT for each ping and then get the average value
         for element in json_data:
             if PROBE_ID_IP_DICT[element['from']] in rtt_probes_dict.keys():
-                # QP：如果‘avg’的值为不为-1，那么我们把'avg'的value存到list里
+                # 如果‘avg’的值为不为-1，那么我们把'avg'的value存到list里
                 if element[rtt_type] != -1:
                     rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(element[rtt_type])
-                # QP：如果为-1，那么我们则添加一个0到list里面，一则是避免出现list最后为empty的情况
-                # QP：因为对empty list调用np.mean(), 会发出警告， 二则是避免-1对平均值的影响
+                # 如果为-1，那么我们则添加一个0到list里面，一则是避免出现list最后为empty的情况
+                # 因为对empty list调用np.mean(), 会发出警告， 二则是避免-1对平均值的影响
                 else:
                     rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(0)
 
@@ -109,6 +111,8 @@ def ping_traces_resume(mes_id, probe_ids, rtt_type):
         rtt_probes_dict[key].append(round(np.std(rtt_probes_dict[key][:-1]), 2))
         dst_addr = str(json_data[0]["dst_addr"])
 
+    print "dst_addr:", dst_addr
+    print "rtt_probes_dict", rtt_probes_dict
     return dst_addr, rtt_probes_dict
 
 
@@ -183,6 +187,9 @@ def retrieve_traversed_ip(results):
     return res
 
 
+
+# ======================================================================================================================
+# 此函数用于产生 .csv 文件
 def generate_report(mes_ids, probe_ids, command, name, rtt_type):
     """
         Given a list of mesurement id and a list of probe id, generate a report of format CSV
@@ -224,15 +231,17 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
                         avg_min_rmd = rtt_probes_dict[key][-2]
                         std_rmd = rtt_probes_dict[key][-1]
 
-                output_row.append(avg_min_lispLab)
-                output_row.append(avg_min_mPlane)
-                output_row.append(avg_min_FranceIX)
-                output_row.append(avg_min_rmd)
-                output_row.append(std_lispLab)
-                output_row.append(std_mPlane)
-                output_row.append(std_FranceIX)
-                output_row.append(std_rmd)
-                a.writerow(output_row)
+                # 去掉 avg 有 0 的那一列，即：针对某一 dest，如果至少有一个 probe 没有 ping 通，则把这个 dest 不考虑在内
+                if avg_min_lispLab and avg_min_mPlane and avg_min_FranceIX and avg_min_rmd != 0:
+                    output_row.append(avg_min_lispLab)
+                    output_row.append(avg_min_mPlane)
+                    output_row.append(avg_min_FranceIX)
+                    output_row.append(avg_min_rmd)
+                    output_row.append(std_lispLab)
+                    output_row.append(std_mPlane)
+                    output_row.append(std_FranceIX)
+                    output_row.append(std_rmd)
+                    a.writerow(output_row)
 
     if command == "TRACEROUTE":
         report_name_traceroute = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report.csv".format(command, name))
