@@ -34,7 +34,7 @@ ANALYZED_TRACE_FILE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME)
 # 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
 GENERATE_TYPE = 'PING'  # 'PING' or 'TRACEROUTE'
 IP_VERSION = 'IPv4'  # 'IPv6'
-RTT_TYPE = 'max'    # 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
+RTT_TYPE = 'avg'    # 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
 MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
 
@@ -46,12 +46,12 @@ MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'li
 def get_measurement_id_list(generate_type, mes_id_type):
     if mes_id_type == 'txt':
         if generate_type == 'PING':
-            mes_id_ping_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_measurement_ids_ping.txt'.format(EXPERIMENT_NAME))
+            mes_id_ping_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_measurement_ids_complete.txt'.format(EXPERIMENT_NAME))
             with open(mes_id_ping_record_file) as f_handler:
                 PING_V4_MES_IDS = [i.strip() for i in f_handler.readlines()] # .strip()用于去掉跟在measurement id后面的换行符
             return PING_V4_MES_IDS
         elif generate_type == 'TRACEROUTE':
-            mes_id_traceroute_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_measurement_ids_traceroute.txt'.format(EXPERIMENT_NAME))
+            mes_id_traceroute_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_traceroute_measurement_ids_complete.txt'.format(EXPERIMENT_NAME))
             with open(mes_id_traceroute_record_file) as f_handler:
                 TRACEROUTE_V4_MES_IDS = [i.strip() for i in f_handler.readlines()] # .strip()用于去掉跟在measurement id后面的换行符
             return TRACEROUTE_V4_MES_IDS
@@ -111,8 +111,7 @@ def ping_traces_resume(mes_id, probe_ids, rtt_type):
         rtt_probes_dict[key].append(round(np.std(rtt_probes_dict[key][:-1]), 2))
         dst_addr = str(json_data[0]["dst_addr"])
 
-    print "dst_addr:", dst_addr
-    print "rtt_probes_dict", rtt_probes_dict
+
     return dst_addr, rtt_probes_dict
 
 
@@ -203,6 +202,7 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
         except:
             os.mkdir(os.path.join(ANALYZED_TRACE_FILE))
 
+
         with open(report_name_ping, 'wb') as f_handler:
             a = csv.writer(f_handler, dialect='excel', delimiter=";")
             a.writerow(
@@ -211,6 +211,8 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
                     'avg(avg RTT) from LISP-Lab', 'avg(avg RTT) from mPlane', 'avg(avg RTT) from FranceIX', 'avg(avg RTT) from rmd',
                     'variance from LISP-Lab', 'variance from mPlane', 'variance from FranceIX', 'variance from rmd']
             )
+            success_ping_mes_id_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_measurement_ids_success.txt'.format(EXPERIMENT_NAME))
+            f = open(success_ping_mes_id_file, 'w')
             for mes_id in mes_ids:
                 output_row = [mes_id]
                 dst_addr, rtt_probes_dict = ping_traces_resume(mes_id, probe_ids, rtt_type)
@@ -232,6 +234,7 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
                         std_rmd = rtt_probes_dict[key][-1]
 
                 # 去掉 avg 有 0 的那一列，即：针对某一 dest，如果至少有一个 probe 没有 ping 通，则把这个 dest 不考虑在内
+                print mes_id
                 if avg_min_lispLab and avg_min_mPlane and avg_min_FranceIX and avg_min_rmd != 0:
                     output_row.append(avg_min_lispLab)
                     output_row.append(avg_min_mPlane)
@@ -242,6 +245,13 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
                     output_row.append(std_FranceIX)
                     output_row.append(std_rmd)
                     a.writerow(output_row)
+                    # 把能 ping 通的所有 measurement id 记录到一个新的 .txt 文件中，方便后续实验处理
+                    f.write(str(mes_id)+'\n')
+                    print mes_id
+            f.close()
+
+
+
 
     if command == "TRACEROUTE":
         report_name_traceroute = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report.csv".format(command, name))

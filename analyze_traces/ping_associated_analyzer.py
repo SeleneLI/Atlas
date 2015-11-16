@@ -22,7 +22,8 @@ PROBE_NAME_ID_DICT = {
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '4_probes_to_alexa_top50'
-TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_avg.csv')
+RTT_TYPE = 'avg'
+TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}.csv'.format(RTT_TYPE))
 
 # ======================================================================================================================
 # 此函数对targeted_file进行计算处理，可得到每个probe在整个实验中的variance的平均数
@@ -110,17 +111,89 @@ def minimum_rtt_calculator(targeted_file):
 
     return min_rtt_dict
 
-# ======================================================================================================================
-# 此函数会挑出4个probes ping 同一个dest时每一时刻的RTT最小的那个probe
-# 针对 target file 计算出每个probe共有多少次是RTT最小的，最后除以ping过的dest数求出百分比
-# input: targeted_file
-# output: dict={'probe_name': RTT最小的次数（或百分比）}
-def probes_dest_min_rtt_percentage(targeted_file):
 
-    return None
+
+# ======================================================================================================================
+# 此函数可以从读入的 csv 文件中提取出以 probe name 为字典 keys，以 RTT 为字典 values 的字典
+# input: targeted_file（会按照文件名格式判断读入 rtt 的方式）
+# output: dict{ 'probe_1': [rtt_1, rtt_2, rtt_3, ...],
+#               'probe_2': [rtt_1, rtt_2, rtt_3, ...],
+#               'probe_3': [rtt_1, rtt_2, rtt_3, ...],
+#               'probe_4': [rtt_1, rtt_2, rtt_3, ...]
+#                }
+def get_probe_rtt_mean_list(targeted_file):
+    dict_probe_rtt = {}
+    dict_probe_index = {}
+    index = -1
+    print "get_probe_rtt_mean_list(targeted_file) has been called"
+
+    with open(targeted_file) as f_handler:
+        for line in f_handler:
+            if line.split(';')[0] == 'mesurement id':
+                for title in line.split(';'):
+                    index = index + 1
+                    if re.match(r'avg', title):
+                        dict_probe_rtt[title.split()[3]] = []
+                        dict_probe_index[index] = title.split()[3]
+            else:
+                for index in dict_probe_index.keys():
+                    dict_probe_rtt[dict_probe_index[index]].append(float(line.split(';')[index]))
+
+    return dict_probe_rtt
+
+
+# ======================================================================================================================
+# 此函数可以从读入的 csv 文件中提取出以 probe name 为字典 keys，以 RTT 为字典 values 的字典
+# input: targeted_file（会按照文件名格式判断读入 rtt 的方式）
+# output: dict{ 'probe_1': [rtt_1, rtt_2, rtt_3, ...],
+#               'probe_2': [rtt_1, rtt_2, rtt_3, ...],
+#               'probe_3': [rtt_1, rtt_2, rtt_3, ...],
+#               'probe_4': [rtt_1, rtt_2, rtt_3, ...]
+#                }
+def get_dest_probe_rtt(targeted_file, dest, rtt_type):
+    dict_probe_rtt = {}
+    rtt_type_index = {'min': 0, 'avg': 1, 'max': 2}
+
+    with open(targeted_file) as f_handler:
+        next(f_handler)
+        for line in f_handler:
+            if line.split(';')[0] == dest:
+                if line.split(';')[1] not in dict_probe_rtt.keys():
+                    dict_probe_rtt[line.split(';')[1]] = []
+                for element in line.split(';')[2:]:
+                    dict_probe_rtt[line.split(';')[1]].append(float(element.split(',')[rtt_type_index[rtt_type]]))
+
+    return dict_probe_rtt
+
+
+
+
+# ======================================================================================================================
+# 此函数可以从读入的 csv 文件中提取出所有的 dest 并装入一个 list 中：
+# input = target file
+# output = [dest_1, dest_2, ..., dest_n]
+def get_all_dest(targeted_file):
+    dest_list = []
+
+    with open(targeted_file) as f_handler:
+        next(f_handler)
+        for line in f_handler:
+            dest_list.append(line.split(';')[0])
+
+    return list(set(dest_list))
+
+
+
 
 
 
 if __name__ == "__main__":
-    print means_of_variance_calculator(TARGET_CSV_TRACES)
-    print minimum_rtt_calculator(TARGET_CSV_TRACES)
+    # print means_of_variance_calculator(TARGET_CSV_TRACES)
+    # print minimum_rtt_calculator(TARGET_CSV_TRACES)
+    # print math_tool.correlation_calculator(get_probe_rtt_mean_list(TARGET_CSV_TRACES))
+    # print math_tool.correlation_calculator(get_dest_probe_rtt(os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME)), '208.82.238.129', RTT_TYPE))
+    for dest in get_all_dest(os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))):
+        print dest
+        for key in get_dest_probe_rtt(os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME)), dest, RTT_TYPE):
+            print len(get_dest_probe_rtt(os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME)), dest, RTT_TYPE)[key])
+        print math_tool.correlation_calculator(get_dest_probe_rtt(os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME)), dest, RTT_TYPE))

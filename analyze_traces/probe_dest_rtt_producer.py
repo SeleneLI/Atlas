@@ -25,7 +25,7 @@ PROBE_NAME_ID_DICT = {
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '4_probes_to_alexa_top50'
 TARGET_TRACES_PATH = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)
-PING_MEASUREMENT_ID_LIST = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '4_probes_to_alexa_top50_measurement_ids_ping.txt')
+PING_MEASUREMENT_ID_LIST = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_measurement_ids_success.txt'.format(EXPERIMENT_NAME))
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))
 
 # ======================================================================================================================
@@ -94,11 +94,15 @@ def probes_dest_rtt_csv_producer(target_files, stored_file):
                     dest = destination_finder(json_data)
                     probes =  probes_finder(json_data)
                     rtts_probes = rtt_finder(probes_finder(json_data), json_data)
+                    for key in rtts_probes.keys():
+                        print rtts_probes[key]
+
 
                     for probe in probes:
                         rtts = [dest, PROBE_NAME_ID_DICT[str(probe)]]
                         for rtt in rtts_probes[probe]:
                             rtts.append(rtt)
+
                         a.writerow(rtts)
 
 
