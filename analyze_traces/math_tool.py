@@ -18,24 +18,7 @@ from scipy.stats import pearsonr
 # output: list中最小值的index所组成的list
 def minimum_value_index_explorer(target_list):
 
-    # 在 target_list 中挑出有相同数值所对应的 index 而组成的list
-    identical_elements_value_list = [value for index, value in enumerate(target_list) if target_list.count(value) > 1]
-    identical_elements_index_list = [index for index, value in enumerate(target_list) if target_list.count(value) > 1]
-
-    # 如果 identical_elements_value_list is None
-    if len(identical_elements_value_list) == 0:
-        return [target_list.index(min(target_list))]
-    # 如果 identical_elements_value_list is not None
-    else:
-        # 如果 identical_elements_value_list 中的元素 不是 target_list 中的最小值
-        # 那就直接返回 target_list 最小值的index即可
-        if identical_elements_value_list[0] != min(target_list):
-            return [target_list.index(min(target_list))]
-        # 如果 identical_elements_value_list 中的元素 就是 target_list 中的最小值
-        # 那就需要返回 identical_elements_index_list，因为它记录了多个最小值的 index 的 list
-        else:
-            return identical_elements_index_list
-
+    return [i for i, x in enumerate(target_list) if x == min(target_list)]
 
 
 
@@ -65,7 +48,8 @@ def correlation_calculator(dict_target):
 
 
 # ======================================================================================================================
-# if __name__ == "__main__":
+if __name__ == "__main__":
+    print  minimum_value_index_explorer([2.0, 1.0, 3.0, 4.0, 3.0, 1.0])
 #     dict = {"lisp":[147.61, 18.33, 419.09],
 #             "mplane":[131.16, 13.65, 304.15],
 #             "franceIX":[158.42, 16.79, 252.14],
@@ -73,4 +57,5 @@ def correlation_calculator(dict_target):
 #             }
 #
 #     print correlation_calculator(dict)
+
 
