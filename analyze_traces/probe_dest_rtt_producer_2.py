@@ -158,6 +158,23 @@ def probes_finder(json_data):
                 'probe_4': ['min'/'avg'/'max', ..., 'min'/'avg'/'max']}
 """
 def rtt_finder(probes, json_data):
+    """
+        @:param probes, type of list, which contains a list of probe ID present in a given JSON file
+        @:param json_data, type of JSON object, which is iterable and obtained from a input JSON file.
+
+        @:return rtt_probes_dict, type pf dictionary, whose possible format is as follows:
+                {
+                'probe_1': ['min'/'avg'/'max', ..., 'min'/'avg'/'max'],
+                'probe_2': ['min'/'avg'/'max', ..., 'min'/'avg'/'max'],
+                'probe_3': ['min'/'avg'/'max', ..., 'min'/'avg'/'max'],
+                'probe_4': ['min'/'avg'/'max', ..., 'min'/'avg'/'max']
+                }
+
+        The basic idea of this function is:
+        first, we populate the output (namely, the variable rtt_probes_dict with key and its default value: [-1,-1,-1])
+        then, we modified the aforementioned dictionary, more precisely the value in dictionary, according to the index,
+         which is calculated by timestamp
+    """
     rtt_probes_dict = {}
     # 记录每一个实验中, 每个probe的第一命令的发起时间
     ref_time_dict = {}
@@ -168,24 +185,16 @@ def rtt_finder(probes, json_data):
 
     print ref_time_dict
 
+
+
     for record in json_data:
         current_time = int(record['timestamp'])
+        # 如果第一个实验数据的timestamp12：00，实验间隔是10分钟，下一个实验数据是12：10，那么该数据对应的index就是1，如果是下一个
+        # 实验数据点的时刻是 12：20，那么该数据的index是2，下标为1点，则永远保持为[-1.0, -1.0, -1.0]
         index = int(round((current_time - ref_time_dict[record['prb_id']])/EXP_INTERVAL))
         print "index", index
-        # rtt_probes_dict[record['prb_id']][index] = [record['min'], record['avg'], record['max'], datetime.fromtimestamp(record['timestamp']).strftime("%H:%M:%S")]
         rtt_probes_dict[record['prb_id']][index] = [record['min'], record['avg'], record['max']]
-
-        # rtt_probes_dict[record['prb_id']].append(
-        #     [
-        #         record['min'],
-        #         record['avg'],
-        #         record['max'],
-        #         record['timestamp']
-        #         # datetime.fromtimestamp(record['timestamp']).strftime("%Y/%m/%d %H:%M:%S")
-        #         # datetime.fromtimestamp(record['timestamp']).strftime("%H:%M:%S")
-        #     ]
-        # )
-
+        
     return rtt_probes_dict
 
 
@@ -193,7 +202,6 @@ def rtt_finder(probes, json_data):
 if __name__ == "__main__":
     # probes_dest_rtt_csv_producer(json_file_finder('2841097.json'), JSON2CSV_FILE)
     probes_dest_rtt_csv_producer(json_file_finder(PING_MEASUREMENT_ID_LIST), JSON2CSV_FILE)
-
 
     input_dict = {}
     output_dict = {}
@@ -210,12 +218,51 @@ if __name__ == "__main__":
 
     pprint.pprint(input_dict)
 
-    # approach 1: 将 所有的零 以list平均值替代
+    # approach 1: 将 所有的-1.0 以list平均值替代
+    # 比如 有这样的字典
+    # {
+    #   '1.2.3.4':{
+    #               'A': [4.0, 8.0, 5.0, 4.3, 7.1, 8,2, -1.0]
+    #               'B': [2.0, 6.0, -1.0, 7.3, 1.1, 8,2, 8.6]
+    #               'C': [2.0, 6.0, 3.3, 7.3, 1.1, 8,2, 8.6]
+    #               'D': [2.0, 6.0, 11.0, 7.3, 1.1, -1.0, 8.6]
+    #             }
+    # }
+    # 由于，坏点(也即是-1.0)的存在，如果我们把A，B，C，D对应的list看作一个矩阵的话，我们想法是把所有-1.0都用其所在行的平均值代替
+    # 第一步需要先把所有的-1.0替换成0，这样不会影响计算平均值
+    # 最后得到的字典应该是：
+    # {
+    #   '1.2.3.4':{
+    #               'A': [4.0, 8.0, 5.0, 4.3, 7.1, 8,2, 0.0]
+    #               'B': [2.0, 6.0, 0.0, 7.3, 1.1, 8,2, 8.6]
+    #               'C': [2.0, 6.0, 3.3, 7.3, 1.1, 8,2, 8.6]
+    #               'D': [2.0, 6.0, 11.0, 7.3, 1.1, 0.0, 8.6]
+    #             }
+    # }
+    # 接下来，再继续将0替换成平均值
+    # {
+    #   '1.2.3.4':{
+    #               'A': [4.0, 8.0, 5.0, 4.3, 7.1, 8,2, MEAN]
+    #               'B': [2.0, 6.0, MEAN, 7.3, 1.1, 8,2, 8.6]
+    #               'C': [2.0, 6.0, 3.3, 7.3, 1.1, 8,2, 8.6]
+    #               'D': [2.0, 6.0, 11.0, 7.3, 1.1, MEAN, 8.6]
+    #             }
+    # }
     for dst in input_dict.keys():
         output_dict[dst] = {}
         for probe_name in input_dict[dst].keys():
+            # 将输入字典中所有的 -1.0用 0.0 来替换
             input_dict[dst][probe_name] = [0.0 if x == -1.0 else x for x in input_dict[dst][probe_name]]
+            # 进一步将所有的零以该行的平均值替换
             input_dict[dst][probe_name] = [np.mean(input_dict[dst][probe_name]) if x == 0.0 else x for x in input_dict[dst][probe_name]]
+        # 替换完毕后，得到一个干净的字典，其形式为
+        # {
+        #   'A': [4.0, 8.0, 5.0, 4.3, 7.1, 8,2, MEAN]
+        #   'B': [2.0, 6.0, MEAN, 7.3, 1.1, 8,2, 8.6]
+        #   'C': [2.0, 6.0, 3.3, 7.3, 1.1, 8,2, 8.6]
+        #   'D': [2.0, 6.0, 11.0, 7.3, 1.1, MEAN, 8.6]
+        # }
+        # 并对以上字典，调用correlation_calculator()计算平均值
         output_dict[dst] = math_tool.correlation_calculator(input_dict[dst])
 
 
@@ -223,6 +270,25 @@ if __name__ == "__main__":
 
 
     # approach 2: 将 所有的零 所在的列都删除
+    # 比如 有这样的字典
+    # {
+    #   '1.2.3.4':{
+    #               'A': [4.0, 8.0, 5.0, 4.3, 7.1, 8,2, -1.0]
+    #               'B': [2.0, 6.0, -1.0, 7.3, 1.1, 8,2, 8.6]
+    #               'C': [2.0, 6.0, 3.3, 7.3, 1.1, 8,2, 8.6]
+    #               'D': [2.0, 6.0, 11.0, 7.3, 1.1, -1.0, 8.6]
+    #             }
+    # }
+    # 由于，坏点(也即是-1.0)的存在，如果我们把A，B，C，D对应的list看作一个矩阵的话，我们想法是把含有 -1.0的列都删去
+    # 最后得到的字典应该是：
+    # {
+    #   '1.2.3.4':{
+    #               'A': [4.0, 8.0, 4.3, 7.1]
+    #               'B': [2.0, 6.0, 7.3, 1.1]
+    #               'C': [2.0, 6.0, 7.3, 1.1]
+    #               'D': [2.0, 6.0, 7.3, 1.1]
+    #             }
+    # }
     with open(JSON2CSV_FILE) as f_handler:
         next(f_handler)
         for line in f_handler:
@@ -248,6 +314,7 @@ if __name__ == "__main__":
         index_list = list(set(index_list))
 
         for probe_name in input_dict[dst].keys():
+            # 我们只保留 下标没有出现在 index_list 中的点，即删除所有坏点以及坏点所在列的其他所有点
             input_dict[dst][probe_name] = [x for i, x in enumerate(input_dict[dst][probe_name]) if i not in index_list]
 
         print dst, index_list, len(input_dict[dst][probe_name])
