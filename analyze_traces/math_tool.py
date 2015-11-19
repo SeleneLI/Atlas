@@ -57,9 +57,9 @@ def minimum_value_index_explorer(target_list):
 #                }
 def correlation_calculator(dict_target):
     dict_correlation = {}
-    for i in dict_target:
+    for i in sorted(dict_target.keys()):
         temp = []
-        for j in dict_target:
+        for j in sorted(dict_target.keys()):
             temp.append(round(pearsonr(dict_target[i], dict_target[j])[0], 4))
         dict_correlation[i] = temp
 

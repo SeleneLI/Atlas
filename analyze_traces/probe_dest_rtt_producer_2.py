@@ -11,6 +11,7 @@ from datetime import datetime
 import numpy as np
 import re
 import math_tool as math_tool
+import socket
 
 
 # ==========================================Section: constant variable declaration======================================
@@ -267,6 +268,11 @@ if __name__ == "__main__":
 
 
     pprint.pprint(output_dict)
+    for dst in sorted(output_dict.keys(), key=lambda item: socket.inet_aton(item)):
+        print dst
+        for probe_name in sorted(output_dict[dst].keys()):
+            # print '%12s  %36s ' % (probe_name, output_dict[dst][probe_name])
+            print '\t{:<12}\t{:<36}'.format(probe_name, output_dict[dst][probe_name])
 
 
     # approach 2: 将 所有的零 所在的列都删除
@@ -289,6 +295,8 @@ if __name__ == "__main__":
     #               'D': [2.0, 6.0, 7.3, 1.1]
     #             }
     # }
+
+    output_dict_2 = {}
     with open(JSON2CSV_FILE) as f_handler:
         next(f_handler)
         for line in f_handler:
@@ -302,7 +310,7 @@ if __name__ == "__main__":
     # pprint.pprint(input_dict)
     for dst in input_dict.keys():
         # 针对每一个 destination @Ip 做如下处理
-        output_dict[dst] = {}
+        output_dict_2[dst] = {}
         # index_list 存放 需要被删除的元素的下标
         index_list = []
         # 以Probe name为key, 遍历一个字典，对应key的value实际上为一个含有RTT数值的list,
@@ -317,9 +325,14 @@ if __name__ == "__main__":
             # 我们只保留 下标没有出现在 index_list 中的点，即删除所有坏点以及坏点所在列的其他所有点
             input_dict[dst][probe_name] = [x for i, x in enumerate(input_dict[dst][probe_name]) if i not in index_list]
 
-        print dst, index_list, len(input_dict[dst][probe_name])
-        output_dict[dst] = math_tool.correlation_calculator(input_dict[dst])
+        # print dst, index_list, len(input_dict[dst][probe_name])
+        output_dict_2[dst] = math_tool.correlation_calculator(input_dict[dst])
 
 
-    pprint.pprint(output_dict)
+    pprint.pprint(output_dict_2)
+    for dst in sorted(output_dict_2.keys(), key=lambda item: socket.inet_aton(item)):
+        print dst
+        for probe_name in sorted(output_dict_2[dst].keys()):
+            # print '%12s  %36s ' % (probe_name, output_dict[dst][probe_name])
+            print '\t{:<12}\t{:<36}\t{:<36}'.format(probe_name, output_dict[dst][probe_name], output_dict_2[dst][probe_name])
 
