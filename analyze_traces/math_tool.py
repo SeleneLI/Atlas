@@ -3,13 +3,15 @@
 # 定义了一些基本的数学方面运算函数，供别的 script 调用
 __author__ = 'yueli'
 
+
+import pprint
 from config.config import *
 import numpy as np
 import re
 from scipy.stats import pearsonr
 
 # ==========================================Section: constant variable declaration======================================
-
+EXPERIMENT_NAME = '4_probes_to_alexa_top50'
 
 # ======================================================================================================================
 # 此函数会返回一个list中最小值的一个或多个index，
@@ -34,6 +36,8 @@ def minimum_value_index_explorer(target_list):
         # 如果 identical_elements_value_list 中的元素 就是 target_list 中的最小值
         # 那就需要返回 identical_elements_index_list，因为它记录了多个最小值的 index 的 list
         else:
+            print "AIUV"
+            print min(target_list), identical_elements_value_list[0], min(target_list) != identical_elements_value_list[0]
             return identical_elements_index_list
 
 
@@ -62,15 +66,26 @@ def correlation_calculator(dict_target):
     return dict_correlation
 
 
+def minimum_value_index_explorer2(target_list):
+
+    return [i for i, x in enumerate(target_list) if x == min(target_list)]
+
 
 
 # ======================================================================================================================
-# if __name__ == "__main__":
-#     dict = {"lisp":[147.61, 18.33, 419.09],
-#             "mplane":[131.16, 13.65, 304.15],
-#             "franceIX":[158.42, 16.79, 252.14],
-#             "rmd":[27.87, 13.24, 63.27]
-#             }
-#
-#     print correlation_calculator(dict)
+if __name__ == "__main__":
+    dict = {"lisp":[147.61, 18.33, 419.09],
+            "mplane":[131.16, 13.65, 304.15],
+            "franceIX":[158.42, 16.79, 252.14],
+            "rmd":[27.87, 13.24, 63.27]
+            }
+
+    test_example = [5,5,4,4,4,3,3,2,2]
+
+    test2 = [2.0, 1.0, 3.0, 3.0, 4.0, 1.0]
+
+
+    JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}_song.csv'.format(EXPERIMENT_NAME))
+
+
 
