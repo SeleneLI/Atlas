@@ -30,7 +30,7 @@ TARGET_CSV_TRACES = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPE
 # 因为要从 TARGET_CSV_TRACES 中一下生成 destination 数目个 figure，所以此处是定义出要存 figure 的路径，
 # 具体名称在生成图的时候按照 destination 给出
 FIGURE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'time_sequence')  # Needs to change
-RTT_TYPE = 'avg'    # 'min' or 'avg' or 'max'
+RTT_TYPE = 'max'    # 'min' or 'avg' or 'max'
 X_LABEL = 'experiment number'
 Y_LABEL = 'rtt (ms)'
 FONTSIZE = 20
@@ -47,7 +47,7 @@ GENERATE_VARIABLE = 'dest'  # 'dest' or 'probe'
 #          'probe_3': [rtt1, rtt2, rtt3],
 #          'probe_4': [rtt1, rtt2, rtt3]}
 # output = X轴是时间，Y轴是4个probes 在每一时刻对应的rtt
-def plot_time_sequence(probes_rtt_dict, target_variable):
+def plot_time_sequence(probes_rtt_dict, target_variable, generate_variable):
     x_length = 0
     for key in probes_rtt_dict.keys():
         x_length = len(probes_rtt_dict[key])
@@ -57,7 +57,8 @@ def plot_time_sequence(probes_rtt_dict, target_variable):
     plt.xlim(1, x_length)
     plt.xlabel(X_LABEL, fontsize = FONTSIZE)
     plt.ylabel(Y_LABEL, fontsize = FONTSIZE)
-    # plt.legend(loc='best')
+    if generate_variable == 'dest':
+        plt.legend(loc='best')
 
     # 检查是否有 os.path.join(FIGURE_PATH, RTT_TYPE) 存在，不存在的话creat
     try:
@@ -162,8 +163,8 @@ def get_probe_list(target_file):
 if __name__ == "__main__":
     if GENERATE_VARIABLE == 'dest':
         for dest in get_dest_list(TARGET_CSV_TRACES):
-            plot_time_sequence(probes_rtt_dict_finder(TARGET_CSV_TRACES, dest, RTT_TYPE), dest)
+            plot_time_sequence(probes_rtt_dict_finder(TARGET_CSV_TRACES, dest, RTT_TYPE), dest, GENERATE_VARIABLE)
     elif GENERATE_VARIABLE == 'probe':
         for probe in get_probe_list(TARGET_CSV_TRACES):
-            plot_time_sequence(destinations_rtt_dict_finder(TARGET_CSV_TRACES, probe, RTT_TYPE), probe)
+            plot_time_sequence(destinations_rtt_dict_finder(TARGET_CSV_TRACES, probe, RTT_TYPE), probe, GENERATE_VARIABLE)
 
