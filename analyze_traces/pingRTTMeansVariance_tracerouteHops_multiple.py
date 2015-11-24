@@ -24,6 +24,14 @@ PROBE_ID_IP_DICT = {
     "132.227.120.130": "22341"
 }
 
+PROBE_ID_NAME_DICT = {
+
+    "6118"  : "FranceIX",
+    "13842" : "mPlane",
+    "16958" : "rmd",
+    "22341" : "LISP-Lab"
+}
+
 # EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的子文件夹名称
 # TARGET_JSON_TRACES_DIR 为要分析的trace的path
 # ANALYZED_TRACE_FILE 为分析完要以.csv形式存储的文件path
@@ -32,7 +40,7 @@ TARGET_JSON_TRACES_DIR = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMEN
 ANALYZED_TRACE_FILE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME)
 
 # 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
-GENERATE_TYPE = 'PING'  # 'PING' or 'TRACEROUTE'
+GENERATE_TYPE = 'TRACEROUTE'  # 'PING' or 'TRACEROUTE'
 IP_VERSION = 'IPv4'  # 'IPv6'
 RTT_TYPE = 'avg'    # 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
@@ -193,6 +201,8 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
     """
         Given a list of mesurement id and a list of probe id, generate a report of format CSV
     """
+    probe_name_list = PROBE_ID_NAME_DICT.values()
+
 
     if command == "PING":
         report_name_ping = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report_{2}.csv".format(command, name, rtt_type))
@@ -205,53 +215,52 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
 
         with open(report_name_ping, 'wb') as f_handler:
             a = csv.writer(f_handler, dialect='excel', delimiter=";")
-            a.writerow(
-                [
-                    'mesurement id', 'Destination',
-                    'avg(avg RTT) from LISP-Lab', 'avg(avg RTT) from mPlane', 'avg(avg RTT) from FranceIX', 'avg(avg RTT) from rmd',
-                    'variance from LISP-Lab', 'variance from mPlane', 'variance from FranceIX', 'variance from rmd']
+            csv_title = ['mesurement id', 'Destination']
+            csv_title.extend(
+                ["{0}({0} RTT) from {1}".format(rtt_type, probe_name) for probe_name in probe_name_list ]
             )
+            csv_title.extend(
+                ["variance from {1}".format(rtt_type, probe_name) for probe_name in probe_name_list]
+            )
+            a.writerow(csv_title)
             success_ping_mes_id_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_measurement_ids_success.txt'.format(EXPERIMENT_NAME))
             f = open(success_ping_mes_id_file, 'w')
             for mes_id in mes_ids:
                 output_row = [mes_id]
                 dst_addr, rtt_probes_dict = ping_traces_resume(mes_id, probe_ids, rtt_type)
                 output_row.append(dst_addr)
-                avg_min_lispLab = avg_min_mPlane = avg_min_FranceIX = avg_min_rmd = \
-                    std_lispLab = std_mPlane = std_FranceIX = std_rmd = 0
-                for key in rtt_probes_dict.keys():
-                    if key == '22341':
-                        avg_min_lispLab = rtt_probes_dict[key][-2]
-                        std_lispLab = rtt_probes_dict[key][-1]
-                    elif key == '13842':
-                        avg_min_mPlane = rtt_probes_dict[key][-2]
-                        std_mPlane = rtt_probes_dict[key][-1]
-                    elif key == '6118':
-                        avg_min_FranceIX = rtt_probes_dict[key][-2]
-                        std_FranceIX = rtt_probes_dict[key][-1]
-                    elif key == '16958':
-                        avg_min_rmd = rtt_probes_dict[key][-2]
-                        std_rmd = rtt_probes_dict[key][-1]
+
+                # e.g. probe_name_list = ["FranceIX", "mPlane", "rmd", "LISP-Lab"]
+                for probe_name in probe_name_list:
+                    # for example , rtt_probes_dict.keys() may be ["6118", "13842", "16958", "22341"]
+                    for key in rtt_probes_dict.keys():
+                        if PROBE_ID_NAME_DICT[key] == probe_name:
+                            output_row.append(rtt_probes_dict[key][-2])
+
+                #上述循环结束之后，output_row(注：类型为list) 会增加 len(probe_name_list) 个元素，每个元素均为RTT值，
+                #且和CSV开头的title中的出现的Probe的顺序一致
+                #举例说明：假如CSV开头的title为：
+                #avg(avg RTT) from LISP-Lab; avg(avg RTT) from mPlane; avg(avg RTT) from FranceIX; avg(avg RTT) from rmd
+                #那么output_row新添加的四个元素，分别是这几个 Probe 下实验得到的 RTT 值
+
+                for probe_name in probe_name_list:
+                    for key in rtt_probes_dict.keys():
+                        if PROBE_ID_NAME_DICT[key] == probe_name:
+                            output_row.append(rtt_probes_dict[key][-1])
+                # 设定一个 写操作的flag, 其默认值为 1，接下来该flag会通过循环依次于output_row中RTT元素依次进行 与操作
+                # 如任意一个Probe对应的 RTT值为0，则write_flag会被设置成0
+                write_flag = 1
+
+                for rtt in output_row[2:len(probe_name_list)+2]:
+                    write_flag = write_flag and rtt
 
                 # 去掉 avg 有 0 的那一列，即：针对某一 dest，如果至少有一个 probe 没有 ping 通，则把这个 dest 不考虑在内
-                print mes_id
-                if avg_min_lispLab and avg_min_mPlane and avg_min_FranceIX and avg_min_rmd != 0:
-                    output_row.append(avg_min_lispLab)
-                    output_row.append(avg_min_mPlane)
-                    output_row.append(avg_min_FranceIX)
-                    output_row.append(avg_min_rmd)
-                    output_row.append(std_lispLab)
-                    output_row.append(std_mPlane)
-                    output_row.append(std_FranceIX)
-                    output_row.append(std_rmd)
+                if write_flag != 0:
                     a.writerow(output_row)
                     # 把能 ping 通的所有 measurement id 记录到一个新的 .txt 文件中，方便后续实验处理
                     f.write(str(mes_id)+'\n')
                     print mes_id
             f.close()
-
-
-
 
     if command == "TRACEROUTE":
         report_name_traceroute = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report.csv".format(command, name))
@@ -263,28 +272,24 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
 
         with open(report_name_traceroute, 'wb') as f_handler:
             a = csv.writer(f_handler, dialect='excel', delimiter=";")
-            a.writerow(['mesurement id', 'target of traceroute',
-                        'hops number from LISP-Lab', 'hops number from mPlane',
-                        'hops number from FranceIX', 'hops number from rmd'])
+            csv_title = ['mesurement id', 'target of traceroute']
+            csv_title.extend(
+                ["hops number from {0}".format(probe_name) for probe_name in probe_name_list]
+            )
+            a.writerow(csv_title)
+
             for mes_id in mes_ids:
                 output_row = [mes_id]
                 dst_addr, hops_number_probes_dict = traceroute_traces_resume(mes_id, probe_ids)
                 output_row.append(dst_addr)
-                hops_number_LISPLab = hops_number_mPlane = hops_number_FranceIX = hops_number_rmd = 0
-                for key in hops_number_probes_dict.keys():
-                    if key == '22341':
-                        hops_number_LISPLab = hops_number_probes_dict[key]['hops_number']
-                    elif key == '13842':
-                        hops_number_mPlane = hops_number_probes_dict[key]['hops_number']
-                    elif key == '6118':
-                        hops_number_FranceIX = hops_number_probes_dict[key]['hops_number']
-                    elif key == '16958':
-                        hops_number_rmd = hops_number_probes_dict[key]['hops_number']
 
-                output_row.append(hops_number_LISPLab)
-                output_row.append(hops_number_mPlane)
-                output_row.append(hops_number_FranceIX)
-                output_row.append(hops_number_rmd)
+                # e.g. probe_name_list = ["FranceIX", "mPlane", "rmd", "LISP-Lab"]
+                for probe_name in probe_name_list:
+                    # for example , rtt_probes_dict.keys() may be ["6118", "13842", "16958", "22341"]
+                    for key in hops_number_probes_dict.keys():
+                        if PROBE_ID_NAME_DICT[key] == probe_name:
+                            output_row.append(hops_number_probes_dict[key]['hops_number'])
+
                 a.writerow(output_row)
 
 

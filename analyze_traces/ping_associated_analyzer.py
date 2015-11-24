@@ -7,6 +7,8 @@ from config.config import *
 import numpy as np
 import re
 import math_tool as math_tool
+import pprint
+import socket
 
 
 # ==========================================Section: constant variable declaration======================================
@@ -24,6 +26,11 @@ PROBE_NAME_ID_DICT = {
 EXPERIMENT_NAME = '4_probes_to_alexa_top50'
 RTT_TYPE = 'avg'
 TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}.csv'.format(RTT_TYPE))
+JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))
+
+# 为计算某一特定 probe 的 correlation 时才需此参数
+CORR_PROBE = 'LISP-Lab'     # 'FranceIX' or 'LISP-Lab' or 'mPlane' or 'rmd'
+
 
 # ======================================================================================================================
 # 此函数对targeted_file进行计算处理，可得到每个probe在整个实验中的variance的平均数
@@ -184,6 +191,189 @@ def get_all_dest(targeted_file):
 
 
 
+# To get a dictionary of dedicated rtt type for evey destination
+# input = target json2csv file
+# output = dict{ dict{ [] } }
+# input_dict 把从 JSON2CSV_FILE 得到的数据以字典的形式记录下来
+"""
+    dict_rtt = {'dest_1': {'probe_1': [float(rtt), ..., float(rtt)],
+                             'probe_2': [float(rtt), ..., float(rtt)],,
+                             'probe_3': [float(rtt), ..., float(rtt)]
+                             'probe_4': [float(rtt), ..., float(rtt)]},
+                  'dest_2': {'probe_1': [float(rtt), ..., float(rtt)],
+                             'probe_2': [float(rtt), ..., float(rtt)],,
+                             'probe_3': [float(rtt), ..., float(rtt)]
+                             'probe_4': [float(rtt), ..., float(rtt)]},
+                  ...
+                  }
+"""
+def get_dict_rtt_from_json2csv_file(target_file, rtt_type):
+    # 先根据输入的 rtt_type 找出在dict里存储时的相应 index
+    rtt_type_dict = {'min': 0,
+                     'avg': 1,
+                     'max': 2}
+
+    dict_rtt = {}
+    with open(target_file) as f_handler:
+        next(f_handler)
+        for line in f_handler:
+            line_list = line.split(";")
+            if line_list[0] not in dict_rtt.keys():
+                dict_rtt[line_list[0]] = {}
+                dict_rtt[line_list[0]][line_list[1]] = [float(element.split('/')[rtt_type_dict[rtt_type]]) for element in line_list[2:]]
+            elif line_list[0] in dict_rtt.keys():
+                dict_rtt[line_list[0]][line_list[1]] = [float(element.split('/')[rtt_type_dict[rtt_type]]) for element in line_list[2:]]
+
+    return dict_rtt
+
+
+
+# 用 2 种方法分别实现对齐一个 list 的维度
+# 第一种方法是对于有缺失值的情况下，用自己所有实验的平均值来填补，corr_align_list_dimension_add(target_file, rtt_type)
+# 第二种方法是对于某一probe在某一时刻有缺失时，剔除其余所有probes在此时刻的rtt值，corr_align_list_dimension_remove(target_file, rtt_type)
+# 两种方法的具体操作都在 code 中有注释
+# input = json2csv file
+# output = dict{ dict{ [] } }
+def corr_align_list_dimension_add(target_file, rtt_type):
+    input_dict = get_dict_rtt_from_json2csv_file(target_file, rtt_type)
+    output_dict = {}
+
+    # approach 1: 将 所有的-1.0 以list平均值替代
+    # 比如 有这样的字典
+    # {
+    #   '1.2.3.4':{
+    #               'A': [4.0, 8.0, 5.0, 4.3, 7.1, 8,2, -1.0]
+    #               'B': [2.0, 6.0, -1.0, 7.3, 1.1, 8,2, 8.6]
+    #               'C': [2.0, 6.0, 3.3, 7.3, 1.1, 8,2, 8.6]
+    #               'D': [2.0, 6.0, 11.0, 7.3, 1.1, -1.0, 8.6]
+    #             }
+    # }
+    # 由于，坏点(也即是-1.0)的存在，如果我们把A，B，C，D对应的list看作一个矩阵的话，我们想法是把所有-1.0都用其所在行的平均值代替
+    # 第一步需要先把所有的-1.0替换成0，这样不会影响计算平均值
+    # 最后得到的字典应该是：
+    # {
+    #   '1.2.3.4':{
+    #               'A': [4.0, 8.0, 5.0, 4.3, 7.1, 8,2, 0.0]
+    #               'B': [2.0, 6.0, 0.0, 7.3, 1.1, 8,2, 8.6]
+    #               'C': [2.0, 6.0, 3.3, 7.3, 1.1, 8,2, 8.6]
+    #               'D': [2.0, 6.0, 11.0, 7.3, 1.1, 0.0, 8.6]
+    #             }
+    # }
+    # 接下来，再继续将0替换成平均值
+    # {
+    #   '1.2.3.4':{
+    #               'A': [4.0, 8.0, 5.0, 4.3, 7.1, 8,2, MEAN]
+    #               'B': [2.0, 6.0, MEAN, 7.3, 1.1, 8,2, 8.6]
+    #               'C': [2.0, 6.0, 3.3, 7.3, 1.1, 8,2, 8.6]
+    #               'D': [2.0, 6.0, 11.0, 7.3, 1.1, MEAN, 8.6]
+    #             }
+    # }
+    for dst in input_dict.keys():
+        output_dict[dst] = {}
+        for probe_name in input_dict[dst].keys():
+            # 将输入字典中所有的 -1.0用 0.0 来替换
+            input_dict[dst][probe_name] = [0.0 if x == -1.0 else x for x in input_dict[dst][probe_name]]
+            # 进一步将所有的零以该行的平均值替换
+            input_dict[dst][probe_name] = [np.mean(input_dict[dst][probe_name]) if x == 0.0 else x for x in input_dict[dst][probe_name]]
+        # 替换完毕后，得到一个干净的字典，其形式为
+        # {
+        #   'A': [4.0, 8.0, 5.0, 4.3, 7.1, 8,2, MEAN]
+        #   'B': [2.0, 6.0, MEAN, 7.3, 1.1, 8,2, 8.6]
+        #   'C': [2.0, 6.0, 3.3, 7.3, 1.1, 8,2, 8.6]
+        #   'D': [2.0, 6.0, 11.0, 7.3, 1.1, MEAN, 8.6]
+        # }
+        # 并对以上字典，调用correlation_calculator()计算平均值
+        output_dict[dst] = math_tool.correlation_calculator(input_dict[dst])
+
+    # 以下几行只是为了漂亮地 print 出来，注释与否与最终输出结果无关
+    # pprint.pprint(output_dict)
+    # for dst in sorted(output_dict.keys(), key=lambda item: socket.inet_aton(item)):
+    #     print dst
+    #     for probe_name in sorted(output_dict[dst].keys()):
+    #         # print '%12s  %36s ' % (probe_name, output_dict[dst][probe_name])
+    #         print '\t{:<12}\t{:<36}'.format(probe_name, output_dict[dst][probe_name])
+    return output_dict
+
+def corr_align_list_dimension_remove(target_file, rtt_type):
+    input_dict = get_dict_rtt_from_json2csv_file(target_file, rtt_type)
+    output_dict = {}
+    # approach 2: 将 所有的零 所在的列都删除
+    # 比如 有这样的字典
+    # {
+    #   '1.2.3.4':{
+    #               'A': [4.0, 8.0, 5.0, 4.3, 7.1, 8,2, -1.0]
+    #               'B': [2.0, 6.0, -1.0, 7.3, 1.1, 8,2, 8.6]
+    #               'C': [2.0, 6.0, 3.3, 7.3, 1.1, 8,2, 8.6]
+    #               'D': [2.0, 6.0, 11.0, 7.3, 1.1, -1.0, 8.6]
+    #             }
+    # }
+    # 由于，坏点(也即是-1.0)的存在，如果我们把A，B，C，D对应的list看作一个矩阵的话，我们想法是把含有 -1.0的列都删去
+    # 最后得到的字典应该是：
+    # {
+    #   '1.2.3.4':{
+    #               'A': [4.0, 8.0, 4.3, 7.1]
+    #               'B': [2.0, 6.0, 7.3, 1.1]
+    #               'C': [2.0, 6.0, 7.3, 1.1]
+    #               'D': [2.0, 6.0, 7.3, 1.1]
+    #             }
+    # }
+
+    for dst in input_dict.keys():
+        # 针对每一个 destination @Ip 做如下处理
+        output_dict[dst] = {}
+        # index_list 存放 需要被删除的元素的下标
+        index_list = []
+        # 以Probe name为key, 遍历一个字典，对应key的value实际上为一个含有RTT数值的list,
+        # 找到所有list中元素为-1.0为index,并且存放到一个list中
+        for probe_name in input_dict[dst].keys():
+            tmp = [n for n, x in enumerate(input_dict[dst][probe_name]) if x == -1.0]
+            index_list.extend(tmp)
+            # 删除可能重复的下标
+        index_list = list(set(index_list))
+
+        for probe_name in input_dict[dst].keys():
+            # 我们只保留 下标没有出现在 index_list 中的点，即删除所有坏点以及坏点所在列的其他所有点
+            input_dict[dst][probe_name] = [x for i, x in enumerate(input_dict[dst][probe_name]) if i not in index_list]
+
+        # print dst, index_list, len(input_dict[dst][probe_name])
+        output_dict[dst] = math_tool.correlation_calculator(input_dict[dst])
+
+    # 以下几行只是为了漂亮地 print 出来，注释与否与最终输出结果无关
+    # pprint.pprint(output_dict)
+    # for dst in sorted(output_dict.keys(), key=lambda item: socket.inet_aton(item)):
+    #     print dst
+    #     for probe_name in sorted(output_dict[dst].keys()):
+    #         # print '%12s  %36s ' % (probe_name, output_dict[dst][probe_name])
+    #         print '\t{:<12}\t{:<36}\t{:<36}'.format(probe_name, output_dict[dst][probe_name], output_dict[dst][probe_name])
+
+    return output_dict
+
+
+# Pick up the correlation only associated with a dedicated probe
+# input = corr_align_list_dimension_add(target_file, rtt_type)
+#         or
+#         corr_align_list_dimension_remove(target_file, rtt_type)
+# output = 只针对某一特定 probe 的 correlation 列表
+def pick_up_corr_dedicated_probe(target_file, rtt_type, probe):
+    dict_corr_all_probes = corr_align_list_dimension_remove(target_file, rtt_type)
+    dict_corr_dedicated_probe = {}
+
+    for key in dict_corr_all_probes.keys():
+        dict_corr_dedicated_probe[key] = dict_corr_all_probes[key][probe]
+
+    return dict_corr_dedicated_probe
+
+
+
+# 此函数对已得到的针对某一特定 probe 的 correlation 列表求平均值
+# input = pick_up_corr_dedicated_probe(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)
+# output = [FranceIX_LISP-Lab_correlation, LISP-Lab_LISP-Lab_correlation, mPlane_LISP-Lab_correlation, rmd_LISP-Lab_correlation, ]
+def means_correlation(target_file, rtt_type, probe):
+    dict_corr_dedicated_probe = pick_up_corr_dedicated_probe(target_file, rtt_type, probe)
+    matrix_corr = np.mat(dict_corr_dedicated_probe.values())
+
+    print "Means of correlation for {0} to all the other probes:".format(probe)
+    return matrix_corr.mean(0)
 
 
 
@@ -191,9 +381,8 @@ if __name__ == "__main__":
     # print means_of_variance_calculator(TARGET_CSV_TRACES)
     # print minimum_rtt_calculator(TARGET_CSV_TRACES)
     # print math_tool.correlation_calculator(get_probe_rtt_mean_list(TARGET_CSV_TRACES))
-    # print math_tool.correlation_calculator(get_dest_probe_rtt(os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME)), '208.82.238.129', RTT_TYPE))
-    for dest in get_all_dest(os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))):
-        print dest
-        for key in get_dest_probe_rtt(os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME)), dest, RTT_TYPE):
-            print len(get_dest_probe_rtt(os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME)), dest, RTT_TYPE)[key])
-        print math_tool.correlation_calculator(get_dest_probe_rtt(os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME)), dest, RTT_TYPE))
+
+    # print corr_align_list_dimension_add(JSON2CSV_FILE, RTT_TYPE)
+    print corr_align_list_dimension_remove(JSON2CSV_FILE, RTT_TYPE)
+    print pick_up_corr_dedicated_probe(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)
+    print means_correlation(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)

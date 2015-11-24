@@ -6,9 +6,6 @@ __author__ = 'yueli'
 from config.config import *
 import json
 import csv
-import numpy as np
-import re
-import math_tool as math_tool
 
 
 # ==========================================Section: constant variable declaration======================================
@@ -26,7 +23,16 @@ PROBE_NAME_ID_DICT = {
 EXPERIMENT_NAME = '4_probes_to_alexa_top50'
 TARGET_TRACES_PATH = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)
 PING_MEASUREMENT_ID_LIST = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_measurement_ids_success.txt'.format(EXPERIMENT_NAME))
+
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))
+
+# We define a CONSTANT variable: EXP_INTERVAL, to represent the time interval between two consecutive command
+# (e.g. ping or traceroute)
+EXP_INTERVAL = 600.0
+# We also define a CONSTANT variable: EXP_DUREE, to represent the time span of experimentation
+EXP_SPAN = 6.0*60*60
+# The variable DIMENSION describe the list (containing the RTT) length
+DIMENSION = EXP_SPAN/EXP_INTERVAL
 
 # ======================================================================================================================
 # 此函数负责从 PING_MEASUREMENT_ID_LIST 的txt文档中逐一读出 measurement_id，
@@ -101,7 +107,7 @@ def probes_dest_rtt_csv_producer(target_files, stored_file):
                     for probe in probes:
                         rtts = [dest, PROBE_NAME_ID_DICT[str(probe)]]
                         for rtt in rtts_probes[probe]:
-                            rtts.append(rtt)
+                            rtts.append("/".join([str(element) for element in rtt]))
 
                         a.writerow(rtts)
 
@@ -148,14 +154,50 @@ def probes_finder(json_data):
                 'probe_4': ['min'/'avg'/'max', ..., 'min'/'avg'/'max']}
 """
 def rtt_finder(probes, json_data):
+    """
+        @:param probes, type of list, which contains a list of probe ID present in a given JSON file
+        @:param json_data, type of JSON object, which is iterable and obtained from a input JSON file.
+
+        @:return rtt_probes_dict, type pf dictionary, whose possible format is as follows:
+                {
+                'probe_1': ['min'/'avg'/'max', ..., 'min'/'avg'/'max'],
+                'probe_2': ['min'/'avg'/'max', ..., 'min'/'avg'/'max'],
+                'probe_3': ['min'/'avg'/'max', ..., 'min'/'avg'/'max'],
+                'probe_4': ['min'/'avg'/'max', ..., 'min'/'avg'/'max']
+                }
+
+        The basic idea of this function is:
+        first, we populate the output (namely, the variable rtt_probes_dict with key and its default value: [-1,-1,-1])
+        then, we modified the aforementioned dictionary, more precisely the value in dictionary, according to the index,
+         which is calculated by timestamp
+    """
     rtt_probes_dict = {}
-    for probe in probes:
-        rtt_probes_dict[probe] = []
+    # 记录每一个实验中, 每个probe的第一命令的发起时间
+    ref_time_dict = {}
+    for n, probe in enumerate(probes):
+        # rtt_probes_dict[probe] = []
+        rtt_probes_dict[probe] = [[-1, -1, -1] for x in range(int(DIMENSION))]
+        ref_time_dict[json_data[n]['prb_id']] = int(json_data[n]['timestamp'])
+
+    print ref_time_dict
+
+
 
     for record in json_data:
-        rtt_probes_dict[record['prb_id']].append([record['min'],record['avg'],record['max']])
-
+        current_time = int(record['timestamp'])
+        # 如果第一个实验数据的timestamp12：00，实验间隔是10分钟，下一个实验数据是12：10，那么该数据对应的index就是1，如果是下一个
+        # 实验数据点的时刻是 12：20，那么该数据的index是2，下标为1点，则永远保持为[-1.0, -1.0, -1.0]
+        index = int(round((current_time - ref_time_dict[record['prb_id']])/EXP_INTERVAL))
+        print "index", index
+        rtt_probes_dict[record['prb_id']][index] = [record['min'], record['avg'], record['max']]
+        
     return rtt_probes_dict
+
+
+
+
+
+
 
 
 
