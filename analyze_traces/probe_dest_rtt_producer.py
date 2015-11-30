@@ -24,7 +24,10 @@ EXPERIMENT_NAME = '4_probes_to_alexa_top50'
 TARGET_TRACES_PATH = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)
 PING_MEASUREMENT_ID_LIST = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_measurement_ids_success.txt'.format(EXPERIMENT_NAME))
 
-JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))
+# 想要生成的 .csv file 中 RTT 的type，若为空则全写进去
+RTT_TYPE = 'all'    # 'min' or 'avg' or 'max' or 'all'
+
+JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
 
 # We define a CONSTANT variable: EXP_INTERVAL, to represent the time interval between two consecutive command
 # (e.g. ping or traceroute)
@@ -63,16 +66,18 @@ def json_file_finder(file_string):
 
 
 # ======================================================================================================================
-# 此函数负责把 measurement_id.json 的文件转化成1个 EXPERIMENT_NAME.csv 文件，
+# 此函数负责把 measurement_id.json 的文件转化成1个 EXPERIMENT_NAME.csv 文件，每个元素包含 min/avg/max 等3个RTT值
 # 存在 $HOME/Documents/Codes/Atlas/traces/json2csv/EXPERIMENT_NAME.csv 中
 # input = .json file
 # output = .csv file
-def probes_dest_rtt_csv_producer(target_files, stored_file):
+def probes_dest_rtts_csv_producer(target_files, stored_file, rtt_type):
     # 检查是否有 JSON2CSV_FILE 存在，不存在的话creat
     try:
         os.stat(os.path.join(ATLAS_TRACES, 'json2csv'))
     except:
         os.mkdir(os.path.join(ATLAS_TRACES, 'json2csv'))
+
+    dict_rtt = {'min': 0, 'avg': 1, 'max': 2}
 
     if len(target_files) == 0:
         return "There is no .json file as input"
@@ -101,13 +106,16 @@ def probes_dest_rtt_csv_producer(target_files, stored_file):
                     probes =  probes_finder(json_data)
                     rtts_probes = rtt_finder(probes_finder(json_data), json_data)
                     for key in rtts_probes.keys():
-                        print rtts_probes[key]
+                        print "rtts_probes[key]:", rtts_probes[key]
 
 
                     for probe in probes:
                         rtts = [dest, PROBE_NAME_ID_DICT[str(probe)]]
                         for rtt in rtts_probes[probe]:
-                            rtts.append("/".join([str(element) for element in rtt]))
+                            if rtt_type == 'all':
+                                rtts.append("/".join([str(element) for element in rtt]))
+                            else:
+                                rtts.append(rtt[dict_rtt[rtt_type]])
 
                         a.writerow(rtts)
 
@@ -129,6 +137,9 @@ def destination_finder(json_data):
         return "".join(list(set(destinations)))
     else:
         return "There is more than 1 destination in this .json file"
+
+
+
 
 # ======================================================================================================================
 # 此函数负责在 .json 文件中找出参与实验的所有 probes
@@ -202,5 +213,5 @@ def rtt_finder(probes, json_data):
 
 
 if __name__ == "__main__":
-    # probes_dest_rtt_csv_producer(json_file_finder('2841097.json'), JSON2CSV_FILE)
-    probes_dest_rtt_csv_producer(json_file_finder(PING_MEASUREMENT_ID_LIST), JSON2CSV_FILE)
+    # probes_dest_rtts_csv_producer(json_file_finder('2841097.json'), JSON2CSV_FILE, RTT_TYPE)
+    probes_dest_rtts_csv_producer(json_file_finder(PING_MEASUREMENT_ID_LIST), JSON2CSV_FILE, RTT_TYPE)

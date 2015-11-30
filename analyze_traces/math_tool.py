@@ -9,6 +9,7 @@ from config.config import *
 import numpy as np
 import re
 from scipy.stats import pearsonr
+import rpy2.robjects as robjects
 
 # ==========================================Section: constant variable declaration======================================
 EXPERIMENT_NAME = '4_probes_to_alexa_top50'
@@ -56,17 +57,41 @@ def minimum_value_index_explorer2(target_list):
 # ======================================================================================================================
 if __name__ == "__main__":
 
-    print  minimum_value_index_explorer([2.0, 1.0, 3.0, 4.0, 3.0, 1.0])
+    # print  minimum_value_index_explorer([2.0, 1.0, 3.0, 4.0, 3.0, 1.0])
+    #
+    # dict = {"lisp":[147.61, 18.33, 419.09],
+    #         "mplane":[131.16, 13.65, 304.15],
+    #         "franceIX":[158.42, 16.79, 252.14],
+    #         "rmd":[27.87, 13.24, 63.27]
+    #         }
+    #
+    # test_example = [5,5,4,4,4,3,3,2,2]
+    #
+    # test2 = [2.0, 1.0, 3.0, 3.0, 4.0, 1.0]
 
-    dict = {"lisp":[147.61, 18.33, 419.09],
-            "mplane":[131.16, 13.65, 304.15],
-            "franceIX":[158.42, 16.79, 252.14],
-            "rmd":[27.87, 13.24, 63.27]
-            }
+    r = robjects.r
+    r('library("dtw")')
+    idx = r.seq(0,6.28,len=100)
+    x = [1, 2, 3, 4]
+    print x
 
-    test_example = [5,5,4,4,4,3,3,2,2]
+    y = [1.5, 2.5, 3.5, 4.5]
+    print y
 
-    test2 = [2.0, 1.0, 3.0, 3.0, 4.0, 1.0]
+    z = [2, 3, 4, 5]
+    print z
+
+    alignment = r.dtw(x, y, keep=True)
+    dist1 = alignment.rx('distance')[0][0]
+    print(dist1)
+
+    alignment = r.dtw(y, z, keep=True)
+    dist2 = alignment.rx('distance')[0][0]
+    print(dist2)
+
+    alignment = r.dtw(x, z, keep=True)
+    dist3 = alignment.rx('distance')[0][0]
+    print(dist3)
 
 
 
