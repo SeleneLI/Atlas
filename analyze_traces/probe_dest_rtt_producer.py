@@ -75,7 +75,7 @@ def probes_dest_rtts_csv_producer(target_files, stored_file, rtt_type):
     try:
         os.stat(os.path.join(ATLAS_TRACES, 'json2csv'))
     except:
-        os.mkdir(os.path.join(ATLAS_TRACES, 'json2csv'))
+        os.makedirs(os.path.join(ATLAS_TRACES, 'json2csv'))
 
     dict_rtt = {'min': 0, 'avg': 1, 'max': 2}
 
