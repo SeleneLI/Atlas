@@ -1,50 +1,32 @@
 __author__ = 'yueli'
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from pandas.tools.plotting import autocorrelation_plot
 
+
+def periodicity_verified_autocorr(sig,lags):
+        n = len(sig)
+        print "n:", n
+        x = np.array([float(sig) for sig in sig])
+        print "x:", x
+        result = [np.correlate(x[i:]-x[i:].mean(),x[:n-i]-x[:n-i].mean())[0]\
+            /(x[i:].std()*x[:n-i].std()*(n-i)) \
+            for i in range(1,lags+1)]
+        print "result:", result
+
+        plt.plot(np.arange(1, lags+1), result,'red')
+        # plt.xlim(1, len(np.arange(1, lags+1))/2)
+        plt.xlabel("Order from 1 to n/2-1")
+        plt.ylabel("Auto-\ncorrelation")
+        plt.show()
+
+        return result
 
 if __name__ == "__main__":
-
-    l = [2.1, 2.3, 1.8, 4.5, 2.7, 4.7]
-
-    l_int = [int(value) for value in l]
-    print "l_int:", l_int
-
-
-    d = {}
-
-    for x in l_int:
-        if x not in d.keys():
-            d[x] = 1
-        else:
-            d[x] += 1
-
-    print d
-
-    x_axis = d.keys()
-    y_axis = d.values()
-
-    print x_axis
-    print y_axis
-
-
-    n_groups = len(d.keys())
-    indexs = range(n_groups)
-    bar_width = 0.35
-    y_values = d.values()
-
-
-    plt.grid(True)
-
-    # plt.xlabel(X_LABEL, fontsize=20)
-    # plt.ylabel(Y_LABEL, fontsize=20)
-    # plt.title('Percentage of stability for 5 vantage points', fontsize=18)
-    plt.xticks([j+ bar_width/2 for j in indexs], d.keys(), fontsize=16)
-    plt.xlim(-0.3, n_groups-0.3)
-    plt.ylim(0, max(y_values)+1)
-    rect = plt.bar(indexs, y_values, bar_width, color='b')
-    # autolabel(rect)
-    # plt.legend(loc='upper right')
-
-
+    series = [10, 11, 12, 10.1, 11.1, 12.1, 9.9, 10.9, 11.9, 10.05]
+    s_ping = [0.816, 0.682, 0.596, 0.743, 0.725, 0.692, 0.770, 0.623, 0.746, 0.689, 0.747, 0.607, 0.641, 0.756, 0.708, 0.713, 0.663, 0.779, 0.775, 0.721, 0.715, 0.721, 0.701, 0.588, 0.740, 0.715, 0.818, 0.675, 0.691, 0.530, 0.711, 0.589, 0.718]
+    s = pd.Series(s_ping)
+    autocorrelation_plot(s)
     plt.show()
