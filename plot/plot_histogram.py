@@ -49,7 +49,7 @@ def get_target_csv_name(generate_type):
 
 
 # ======================================================================================================================
-# 此函数可以画出Pie figure
+# 此函数可以画出 histogram figure
 def plot_histogram(list_to_plot, overall_enable):
     print "plot_histogram is called", list_to_plot
     n_groups = len(list_to_plot.keys())

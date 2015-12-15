@@ -5,28 +5,44 @@ import numpy as np
 import pandas as pd
 from pandas.tools.plotting import autocorrelation_plot
 
+def difference_calculator_mean_var(target_dict, ref_probe):
+    dict_mean = {}
+    dict_var = {}
+    for key in target_dict.keys():
+        if key != ref_probe:
+            dict_mean[key] = np.mean(abs(np.matrix(target_dict[key]) - np.matrix(target_dict[ref_probe])).tolist()[0])
+            dict_var[key] = np.var(abs(np.matrix(target_dict[key]) - np.matrix(target_dict[ref_probe])).tolist()[0])
 
-def periodicity_verified_autocorr(sig,lags):
-        n = len(sig)
-        print "n:", n
-        x = np.array([float(sig) for sig in sig])
-        print "x:", x
-        result = [np.correlate(x[i:]-x[i:].mean(),x[:n-i]-x[:n-i].mean())[0]\
-            /(x[i:].std()*x[:n-i].std()*(n-i)) \
-            for i in range(1,lags+1)]
-        print "result:", result
-
-        plt.plot(np.arange(1, lags+1), result,'red')
-        # plt.xlim(1, len(np.arange(1, lags+1))/2)
-        plt.xlabel("Order from 1 to n/2-1")
-        plt.ylabel("Auto-\ncorrelation")
-        plt.show()
-
-        return result
+    return dict_mean, dict_var
 
 if __name__ == "__main__":
-    series = [10, 11, 12, 10.1, 11.1, 12.1, 9.9, 10.9, 11.9, 10.05]
-    s_ping = [0.816, 0.682, 0.596, 0.743, 0.725, 0.692, 0.770, 0.623, 0.746, 0.689, 0.747, 0.607, 0.641, 0.756, 0.708, 0.713, 0.663, 0.779, 0.775, 0.721, 0.715, 0.721, 0.701, 0.588, 0.740, 0.715, 0.818, 0.675, 0.691, 0.530, 0.711, 0.589, 0.718]
-    s = pd.Series(s_ping)
-    autocorrelation_plot(s)
-    plt.show()
+    simulated_dict = {'31.13.76.102': {'LISP-Lab': [163.7450633333, 161.801375, 162.7511183333],
+                      'mPlane': [150.0483333333, 144.6703333333, 143.2673333333],
+                      'FranceIX': [129.097423, 129.014165, 128.961054],
+                      'rmd': [17.0287633333, 17.338855, 17.146705]},
+                      '74.125.136.190': {'LISP-Lab': [163.7450633333, 161.801375, 162.7511183333],
+                      'mPlane': [150.0483333333, 144.6703333333, 143.2673333333],
+                      'FranceIX': [129.097423, 129.014165, 128.961054],
+                      'rmd': [17.0287633333, 17.338855, 17.146705]}
+    }
+
+
+
+    dict_probe_dest_mean = {}
+    dict_probe_dest_var = {}
+    for key_dest in simulated_dict.keys():
+        dict_mean_temp, dict_var_temp = difference_calculator_mean_var(simulated_dict[key_dest], 'FranceIX')
+        for key_probe in dict_mean_temp.keys():
+            print "key_probe:", key_probe
+            if key_probe not in dict_probe_dest_mean.keys():
+                dict_probe_dest_mean[key_probe] = {}
+                dict_probe_dest_mean[key_probe][key_dest] = dict_mean_temp[key_probe]
+                dict_probe_dest_var[key_probe] = {}
+                dict_probe_dest_var[key_probe][key_dest] = dict_var_temp[key_probe]
+            else:
+                dict_probe_dest_mean[key_probe][key_dest] = dict_mean_temp[key_probe]
+                dict_probe_dest_var[key_probe][key_dest] = dict_var_temp[key_probe]
+
+
+    print "dict_probe_dest_mean =", dict_probe_dest_mean
+    print "dict_probe_dest_var =", dict_probe_dest_var
