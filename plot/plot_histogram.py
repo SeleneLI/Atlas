@@ -33,7 +33,7 @@ RTT_TYPE = 'min'    # 'min' or 'avg' or 'max'
 # The full path and figure name
 FIGURE_PATH_NAME = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'histogram')
 X_LABEL = 'probes'      # The name of x_label on the figure
-Y_LABEL = 'means of variance (%)'       # The name of y_label on the figure
+Y_LABEL = 'means of variance (\%)'       # The name of y_label on the figure
 
 
 # ======================================================================================================================
@@ -66,15 +66,17 @@ def plot_histogram(list_to_plot, overall_enable):
 
     plt.grid(True)
 
-    plt.xlabel(X_LABEL, fontsize=20)
-    plt.ylabel(Y_LABEL, fontsize=20)
+    plt.xlabel(r"\textrm{{{0}}}".format(X_LABEL), font)
+    plt.ylabel(r"\textrm{{{0}}}".format(Y_LABEL), font)
     # plt.title('Percentage of stability for 5 vantage points', fontsize=18)
-    plt.xticks([j+ bar_width/2 for j in indexs], list_to_plot.keys(), fontsize=16)
+    plt.xticks([j+ bar_width/2 for j in indexs], list_to_plot.keys(), fontsize=40, fontname='Times New Roman')
+    plt.yticks(fontsize=40, fontname="Times New Roman")
     plt.xlim(-0.3, n_groups-0.3)
     plt.ylim(0, max(y_values)+1)
+    # 不在每个柱状图上显示百分比
     rect = plt.bar(indexs, y_values, bar_width, color='b')
-    autolabel(rect)
-    plt.legend(loc='upper right')
+    # autolabel(rect)
+    plt.legend(loc='best', fontsize=40)
 
     # 检查是否有 os.path.join(FIGURE_PATH, RTT_TYPE) 存在，不存在的话creat
     try:
@@ -84,9 +86,9 @@ def plot_histogram(list_to_plot, overall_enable):
 
 
     if GENERATE_TYPE == 'PING':
-        plt.savefig(os.path.join(FIGURE_PATH_NAME, 'Avg_variance_of_rtt_{0}.eps'.format(RTT_TYPE)), dpi=300)
+        plt.savefig(os.path.join(FIGURE_PATH_NAME, 'Avg_variance_of_rtt_{0}.eps'.format(RTT_TYPE)), dpi=300, transparent=True)
     elif GENERATE_TYPE == 'TRACEROUTE':
-        plt.savefig(os.path.join(FIGURE_PATH_NAME, 'Avg_variance_of_hops_number.eps'), dpi=300)
+        plt.savefig(os.path.join(FIGURE_PATH_NAME, 'Avg_variance_of_hops_number.eps'), dpi=300, transparent=True)
     else:
         print "Wrong GENERATE_TYPE !! It should be: 'PING' or 'TRACEROUTE'"
 

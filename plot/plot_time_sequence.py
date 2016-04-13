@@ -8,6 +8,10 @@ import analyze_traces.ping_associated_analyzer as paa
 import matplotlib.pyplot as plt
 import numpy as np
 import re
+import matplotlib as mpl
+
+mpl.rcParams['text.usetex'] = True
+mpl.rcParams.update({'figure.autolayout': True})
 
 
 # ==========================================Section: constant variable declaration======================================
@@ -24,6 +28,10 @@ PROBE_NAME_ID_DICT = {
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '4_probes_to_alexa_top50'  # Needs to change
 TARGET_CSV_TRACES = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))
+RTT_TYPE = 'avg'
+TARGET_CSV_TRACES_CDF = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}.csv'.format(RTT_TYPE))
+FILE_PATH_CDF_FIGURE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'CDF_RTT_{0}.eps'.format(RTT_TYPE))
+FILE_PATH_CSV_COMP = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'comp_RTTs_between_probes_{0}.eps'.format(RTT_TYPE))
 
 # The title shown on the figure
 # The full path and figure name
@@ -33,7 +41,6 @@ FIGURE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'time_sequ
 RTT_TYPE = 'max'    # 'min' or 'avg' or 'max'
 X_LABEL = 'experiment number'
 Y_LABEL = 'rtt (ms)'
-FONTSIZE = 20
 
 # Plot 时的参考变量
 # 如果是 n 个 probes 对同一 destination 而产生的与 destination 数量一致的 figure 数，输入：'dest'
@@ -55,10 +62,10 @@ def plot_time_sequence(probes_rtt_dict, target_variable, generate_variable):
         # plt.plot([x+1 for x in range(x_length)], probes_rtt_dict[key])
 
     plt.xlim(1, x_length)
-    plt.xlabel(X_LABEL, fontsize = FONTSIZE)
-    plt.ylabel(Y_LABEL, fontsize = FONTSIZE)
+    plt.xlabel(X_LABEL, font)
+    plt.ylabel(Y_LABEL, font)
     if generate_variable == 'dest':
-        plt.legend(loc='best')
+        plt.legend(loc='best', fontsize=40)
 
     # 检查是否有 os.path.join(FIGURE_PATH, RTT_TYPE) 存在，不存在的话creat
     try:
@@ -160,11 +167,86 @@ def get_probe_list(target_file):
 
     return list(set(probe_list))
 
+
+
+# ======================================================================================================================
+# 此函数可以画出 CDF figure
+# input = 想要生成 CDF 的 file
+# output ＝ 存储在相应路径下的一张图
+def plot_cdf(target_file, saving_path_name):
+    cdf_dict = paa.cdf_for_dict(target_file)
+    for probe_key in cdf_dict.keys():
+        x_axis = range(0, len(paa.cdf_for_dict(target_file)[probe_key]))
+        plt.plot(x_axis, paa.cdf_for_dict(target_file)[probe_key], label = probe_key, linewidth = 5)
+        print probe_key, ":", x_axis
+        print "cdf =", paa.cdf_for_dict(target_file)[probe_key]
+
+    # plt.gcf().set_size_inches(9,7)
+    plt.xlabel(r"\textrm{RTT (ms)}", font)
+    plt.ylabel(r"\textrm{cdf (\%)}", font)
+    plt.xticks(fontsize=40, fontname = 'Times New Roman')
+    plt.yticks(fontsize=40, fontname = 'Times New Roman')
+    plt.legend(loc='best', fontsize=40)
+    plt.grid(True)
+    plt.savefig(saving_path_name, dpi=300, transparent=True)
+    plt.show()
+
+# 此函数用做画出 probes 对不同 destinations 产生的平均 RTT 的比较情况，可以 anchor 为参考目标得出各个probe与其的差值
+# input = target_file
+# output = 有 probes 条曲线的一张图
+def comp_means_rtt_dests(target_file, saving_path_name):
+    rtt_means_dict = {}
+    probe_int_dict = {}
+    probe_color_dict = {'mPlane': 'red',
+                        'LISP-Lab': 'blue',
+                        'rmd': 'green',
+                        'FranceIX': 'black'}
+
+    with open(target_file) as f_handler:
+        count = 0
+        for line in f_handler:
+            lines = line.split(";")
+            if lines[0] == 'mesurement id':
+                    for name in lines:
+                        if count > 1:
+                            if name.split(" ")[0] != 'variance':
+                                rtt_means_dict[name.split(" ")[-1]] = []
+                                probe_int_dict[name.split(" ")[-1]] = count
+                                count += 1
+                        else:
+                            count += 1
+            else:
+                for key in rtt_means_dict.keys():
+                    rtt_means_dict[key].append(lines[probe_int_dict[key]])
+
+    for key in rtt_means_dict.keys():
+        x_axis = range(0, len(rtt_means_dict[key]))
+        plt.plot(x_axis, rtt_means_dict[key], label = key, linewidth = 1)
+        # plt.scatter(x_axis, rtt_means_dict[key], label = key, c=probe_color_dict[key])
+
+    # plt.gcf().set_size_inches(8,6)
+    plt.xlabel(r'destinations', font)
+    plt.ylabel(r'rtt (ms)', font)
+    plt.xticks(fontsize=40, fontname = 'Times New Roman')
+    plt.yticks(fontsize=40, fontname = 'Times New Roman')
+    plt.legend(loc='best', fontsize=40)
+    plt.grid(True)
+    # plt.savefig(saving_path_name, dpi=300, transparent=True)
+    plt.show()
+
+
+
+
+
 if __name__ == "__main__":
-    if GENERATE_VARIABLE == 'dest':
-        for dest in get_dest_list(TARGET_CSV_TRACES):
-            plot_time_sequence(probes_rtt_dict_finder(TARGET_CSV_TRACES, dest, RTT_TYPE), dest, GENERATE_VARIABLE)
-    elif GENERATE_VARIABLE == 'probe':
-        for probe in get_probe_list(TARGET_CSV_TRACES):
-            plot_time_sequence(destinations_rtt_dict_finder(TARGET_CSV_TRACES, probe, RTT_TYPE), probe, GENERATE_VARIABLE)
+    # if GENERATE_VARIABLE == 'dest':
+    #     for dest in get_dest_list(TARGET_CSV_TRACES):
+    #         plot_time_sequence(probes_rtt_dict_finder(TARGET_CSV_TRACES, dest, RTT_TYPE), dest, GENERATE_VARIABLE)
+    # elif GENERATE_VARIABLE == 'probe':
+    #     for probe in get_probe_list(TARGET_CSV_TRACES):
+    #         plot_time_sequence(destinations_rtt_dict_finder(TARGET_CSV_TRACES, probe, RTT_TYPE), probe, GENERATE_VARIABLE)
+
+    #comp_means_rtt_dests(TARGET_CSV_TRACES_CDF, FILE_PATH_CSV_COMP)
+
+    plot_cdf(TARGET_CSV_TRACES_CDF, FILE_PATH_CDF_FIGURE)
 

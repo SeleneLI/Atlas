@@ -8,7 +8,10 @@ import re
 import analyze_traces.ping_associated_analyzer as paa
 import analyze_traces.traceroute_associated_analyzer as taa
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
+mpl.rcParams['text.usetex'] = True
+mpl.rcParams.update({'figure.autolayout': True})
 
 
 # ==========================================Section: constant variable declaration======================================
@@ -25,7 +28,7 @@ PROBE_NAME_ID_DICT = {
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '4_probes_to_alexa_top50' # Needs to change
 GENERATE_TYPE = 'PING'   # 'PING' or 'TRACEROUTE'
-RTT_TYPE = 'min'    # 'min' or 'avg' or 'max'
+RTT_TYPE = 'avg'    # 'min' or 'avg' or 'max'
 #TARGET_CSV_NAME = '{0}_IPv4_report_{1}.csv'.format(GENERATE_TYPE, RTT_TYPE)
 #TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, TARGET_CSV_NAME)
 
@@ -60,6 +63,7 @@ def plot_pie_figure(list_to_plot):
     labels = list_to_plot
 
     # autopct='%1.2f%%' means that the pie chart will display 2 decimal points
+    print "labels:", labels
     plt.pie(fracs, explode=EXPLODE, labels=labels, colors=COLORS, autopct='%1.2f%%', startangle=345)
                     # The default startangle is 0, which would start
                     # the Frogs slice on the x-axis.  With startangle=90,
@@ -68,18 +72,20 @@ def plot_pie_figure(list_to_plot):
 
     # plt.title(FIGURE_TITLE)
 
-    # 检查是否有 os.path.join(FIGURE_PATH, GENERATE_TYPE) 存在，不存在的话creat
-    try:
-        os.stat(os.path.join(FIGURE_PATH))
-    except:
-        os.makedirs(os.path.join(FIGURE_PATH))
-
-    if GENERATE_TYPE == 'PING':
-        plt.savefig(os.path.join(FIGURE_PATH, 'Percentage_every_probe_minimum_rtt_{0}.eps'.format(RTT_TYPE)), dpi=300)
-    elif GENERATE_TYPE == 'TRACEROUTE':
-        plt.savefig(os.path.join(FIGURE_PATH, 'Percentage_every_probe_minimum_hops_number.eps'), dpi=300)
-    else:
-        print "Wrong GENERATE_TYPE !! It should be: 'PING' or 'TRACEROUTE'"
+    # # 检查是否有 os.path.join(FIGURE_PATH, GENERATE_TYPE) 存在，不存在的话creat
+    # try:
+    #     os.stat(os.path.join(FIGURE_PATH))
+    # except:
+    #     os.makedirs(os.path.join(FIGURE_PATH))
+    #
+    # if GENERATE_TYPE == 'PING':
+    #     print "**"
+    #     print os.path.join(FIGURE_PATH, 'Percentage_every_probe_minimum_rtt_{0}.eps'.format(RTT_TYPE))
+    #     plt.savefig(os.path.join(FIGURE_PATH, 'Percentage_every_probe_minimum_rtt_{0}.eps'.format(RTT_TYPE)), dpi=300)
+    # elif GENERATE_TYPE == 'TRACEROUTE':
+    #     plt.savefig(os.path.join(FIGURE_PATH, 'Percentage_every_probe_minimum_hops_number.eps'), dpi=300)
+    # else:
+    #     print "Wrong GENERATE_TYPE !! It should be: 'PING' or 'TRACEROUTE'"
 
     plt.show()
 

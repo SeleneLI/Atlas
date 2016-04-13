@@ -9,7 +9,8 @@ import re
 import math_tool as math_tool
 import pprint
 import socket
-
+import math
+from collections import Counter
 
 # ==========================================Section: constant variable declaration======================================
 # probe id和此probe的IP地址间的对应关系
@@ -77,6 +78,7 @@ def means_of_variance_calculator(targeted_file):
 # input: targeted_file
 # output: dict={'probe_name': RTT最小的次数（或百分比）}
 def minimum_rtt_calculator(targeted_file):
+    print targeted_file
     min_rtt_dict = {}
     index__rtt_list = []
     index_probe_name_dict = {}
@@ -121,7 +123,7 @@ def minimum_rtt_calculator(targeted_file):
 
 
 # ======================================================================================================================
-# 此函数可以从读入的 csv 文件中提取出以 probe name 为字典 keys，以 RTT 为字典 values 的字典
+# 此函数可以从读入的 csv 文件中提取出以 probe name 为字典 keys，以 mean RTT 为字典 values 的字典
 # input: targeted_file（会按照文件名格式判断读入 rtt 的方式）
 # output: dict{ 'probe_1': [rtt_1, rtt_2, rtt_3, ...],
 #               'probe_2': [rtt_1, rtt_2, rtt_3, ...],
@@ -146,6 +148,7 @@ def get_probe_rtt_mean_list(targeted_file):
                 for index in dict_probe_index.keys():
                     dict_probe_rtt[dict_probe_index[index]].append(float(line.split(';')[index]))
 
+    print dict_probe_rtt
     return dict_probe_rtt
 
 
@@ -376,6 +379,43 @@ def means_correlation(target_file, rtt_type, probe):
     return matrix_corr.mean(0)
 
 
+# 此函数为 input dict 的每一个 key 计算 CDF
+# input = dict{'key_1': value_1, 'key_2': value_2, 'key_3': value_3, 'key_4': value_4}
+# output = dict{'key_1': cdf_1, 'key_2': cdf_2, 'key_3': cdf_3, 'key_4': cdf_4}
+def cdf_for_dict(target_file):
+    target_dict = get_probe_rtt_mean_list(target_file)
+    cdf_dict = {}
+    sorted_int_dict = {}
+    num_occur_counter_dict = {}
+    pdf_dict = {}
+
+    for key in target_dict.keys():
+        sorted_int_dict[key] = sorted([math.ceil(i) for i in target_dict[key]])
+        num_occur_counter_dict[key] = Counter(sorted_int_dict[key])
+        pdf_dict[key] = []
+        for i in range(int(sorted_int_dict[key][-1])+1):
+            pdf_dict[key].append(0)
+        for counter_key in num_occur_counter_dict[key].keys():
+            pdf_dict[key][int(counter_key)-1] = float(num_occur_counter_dict[key][int(counter_key)])/float(len(target_dict[key]))*100
+        cdf_dict[key] = cdf_from_pdf_list(pdf_dict[key])
+
+    return cdf_dict
+
+
+# pdf list ==> cdf list
+# input = pdf_lidt[pdf1, pdf2, ...]
+# output = cdf_list[cdf1, cdf2, ...]
+def cdf_from_pdf_list(pdf_list):
+    cdf_list = []
+    for value in pdf_list:
+        if not cdf_list:
+            cdf_list.append(value)
+        else:
+            cdf_list.append(value + cdf_list[-1])
+
+    return cdf_list
+
+
 
 if __name__ == "__main__":
     # print means_of_variance_calculator(TARGET_CSV_TRACES)
@@ -383,6 +423,7 @@ if __name__ == "__main__":
     # print math_tool.correlation_calculator(get_probe_rtt_mean_list(TARGET_CSV_TRACES))
 
     # print corr_align_list_dimension_add(JSON2CSV_FILE, RTT_TYPE)
-    print corr_align_list_dimension_remove(JSON2CSV_FILE, RTT_TYPE)
-    print pick_up_corr_dedicated_probe(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)
-    print means_correlation(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)
+    # print corr_align_list_dimension_remove(JSON2CSV_FILE, RTT_TYPE)
+    # print pick_up_corr_dedicated_probe(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)
+    # print means_correlation(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)
+    cdf_for_dict(TARGET_CSV_TRACES)
