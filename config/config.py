@@ -31,12 +31,48 @@ except KeyError:
     print "If every environment variable is well defined, restart Pycharm to try again!"
 
 
+# probe id和此probe的IP地址间的对应关系
+PROBE_NAME_ID_DICT = {
+
+    "FranceIX": "6118",
+    "mPlane": "13842",
+    "rmd": "16958",
+    "LISP-Lab": "22341"
+}
+
+# probe id和此probe的IP地址间的对应关系
+PROBE_ID_NAME_DICT = {
+
+    "6118": "FranceIX",
+    "13842": "mPlane",
+    "16958": "rmd",
+    "22341": "LISP-Lab"
+}
+
+RTT_TYPE_ID_DICT = {
+    "min": 0,
+    "avg": 1,
+    "max": 2
+}
+
+# probe id和此probe的IP地址间的对应关系
+PROBE_NAME_COLUMN_DICT = {
+
+    "FranceIX": 4,
+    "mPlane": 3,
+    "rmd": 5,
+    "LISP-Lab": 2
+}
+
+# 实验中出现的 geo 的list
+GEO_LIST = ['Europe', 'America', 'Asia']
+
 # Plot part
 
 font = {
     'fontname'   : 'Times New Roman',
     'color'      : 'k',
-    'fontsize'   : 50
+    'fontsize'   : 60
        }
 
 fontText = {

@@ -7,31 +7,22 @@ from config.config import *
 import numpy as np
 import re
 import math_tool as math_tool
-import pprint
-import socket
 import math
 from collections import Counter
+import pandas as pd
+import matplotlib.pyplot as plt
 
 # ==========================================Section: constant variable declaration======================================
-# probe id和此probe的IP地址间的对应关系
-PROBE_NAME_ID_DICT = {
-
-    "FranceIX": "6118",
-    "mPlane": "13842",
-    "rmd": "16958",
-    "LISP-Lab": "22341"
-}
-
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '4_probes_to_alexa_top50'
 RTT_TYPE = 'avg'
-TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}.csv'.format(RTT_TYPE))
+TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}_AS.csv'.format(RTT_TYPE))
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))
 
 # 为计算某一特定 probe 的 correlation 时才需此参数
 CORR_PROBE = 'LISP-Lab'     # 'FranceIX' or 'LISP-Lab' or 'mPlane' or 'rmd'
-
+INTERVAL = 1.0
 
 # ======================================================================================================================
 # 此函数对targeted_file进行计算处理，可得到每个probe在整个实验中的variance的平均数
@@ -53,7 +44,7 @@ def means_of_variance_calculator(targeted_file):
                 for title in line.split(';'):
                     index_variance = index_variance + 1
                     # 找到含有'variance'的那几列
-                    if re.match(r'variance', title):
+                    if re.match(r'{0}'.format(RTT_TYPE), title):
                         variance_list_dict[title.split(' ')[2].strip()] = []
                         # 用 index_variance_list 来记录含有 variance 值的是哪几列
                         index_variance_list.append(index_variance)
@@ -91,7 +82,7 @@ def minimum_rtt_calculator(targeted_file):
                 for title in line.split(';'):
                     index_rtt = index_rtt + 1
                     # 找到含有'avg'的那几列
-                    if re.match(r'avg', title):
+                    if re.match(r'{0}'.format(RTT_TYPE), title):
                         min_rtt_dict[title.split(' ')[3].strip()] = 0
                         # 用 index_variance_list 来记录含有 variance 值的是哪几列
                         index__rtt_list.append(index_rtt)
@@ -104,6 +95,7 @@ def minimum_rtt_calculator(targeted_file):
                     min_rtt_list.append(float(line.split(';')[index].strip()))
                 # 挑出4个probe ping同一dest时（即：每行中）RTT最小的那个
                 for index in math_tool.minimum_value_index_explorer(min_rtt_list):
+                    print index
                     min_rtt_dict[index_probe_name_dict[index + index__rtt_list[0]]] += 1
 
     # 如果只想知道每个 probe 所对应的 RTT 最小的次数，那就注释掉这一步；
@@ -119,6 +111,29 @@ def minimum_rtt_calculator(targeted_file):
         min_rtt_dict[key] = round(min_rtt_dict[key] / total_rtt_times * 100, 2)
 
     return min_rtt_dict
+
+
+
+
+
+# ======================================================================================================================
+# 此函数仅负责处理将两层字典的内外层 key 颠倒顺序，即：内外层 key 互换
+def reverse_dict_keys(target_dict):
+    reversed_dict = {}
+    outer_key_list = target_dict.keys()
+    inner_key_list = []
+
+    for outer_key in target_dict.keys():
+        inner_key_list = target_dict[outer_key].keys()
+
+    for new_outer_key in inner_key_list:
+        reversed_dict[new_outer_key] = {}
+        for new_inner_key in outer_key_list:
+            reversed_dict[new_outer_key][new_inner_key] = target_dict[new_inner_key][new_outer_key]
+
+    return reversed_dict
+
+
 
 
 
@@ -153,13 +168,14 @@ def get_probe_rtt_mean_list(targeted_file):
 
 
 # ======================================================================================================================
-# 此函数可以从读入的 csv 文件中提取出以 probe name 为字典 keys，以 RTT 为字典 values 的字典
-# input: targeted_file（会按照文件名格式判断读入 rtt 的方式）
-# output: dict{ 'probe_1': [rtt_1, rtt_2, rtt_3, ...],
-#               'probe_2': [rtt_1, rtt_2, rtt_3, ...],
-#               'probe_3': [rtt_1, rtt_2, rtt_3, ...],
-#               'probe_4': [rtt_1, rtt_2, rtt_3, ...]
-#                }
+# 此函数可以从 JSON2CSV_FILE 读入的 csv 文件中提取出针对某一特定 dest 的以 probe name 为字典 keys，以 RTT series 为字典 values 的字典
+# input: JSON2CSV_FILE（会按照文件名格式判断读入 rtt 的方式）
+# output: 针对某一给定 dest 的 dict{ 'probe_1': [rtt_1, rtt_2, rtt_3, ...],
+#                                  'probe_2': [rtt_1, rtt_2, rtt_3, ...],
+#                                  'probe_3': [rtt_1, rtt_2, rtt_3, ...],
+#                                  'probe_4': [rtt_1, rtt_2, rtt_3, ...]
+#                                 }
+# 注意此函数只是按原 csv trace 提取数据，会有 -1 记录在内，如果不要 -1 还需进一步继续作处理
 def get_dest_probe_rtt(targeted_file, dest, rtt_type):
     dict_probe_rtt = {}
     rtt_type_index = {'min': 0, 'avg': 1, 'max': 2}
@@ -171,7 +187,7 @@ def get_dest_probe_rtt(targeted_file, dest, rtt_type):
                 if line.split(';')[1] not in dict_probe_rtt.keys():
                     dict_probe_rtt[line.split(';')[1]] = []
                 for element in line.split(';')[2:]:
-                    dict_probe_rtt[line.split(';')[1]].append(float(element.split(',')[rtt_type_index[rtt_type]]))
+                    dict_probe_rtt[line.split(';')[1]].append(float(element.split('/')[rtt_type_index[rtt_type]]))
 
     return dict_probe_rtt
 
@@ -194,7 +210,8 @@ def get_all_dest(targeted_file):
 
 
 
-# To get a dictionary of dedicated rtt type for evey destination
+# ======================================================================================================================
+# To get a dictionary of dedicated rtt type for evey destination associated with each probe
 # input = target json2csv file
 # output = dict{ dict{ [] } }
 # input_dict 把从 JSON2CSV_FILE 得到的数据以字典的形式记录下来
@@ -231,6 +248,7 @@ def get_dict_rtt_from_json2csv_file(target_file, rtt_type):
 
 
 
+# ======================================================================================================================
 # 用 2 种方法分别实现对齐一个 list 的维度
 # 第一种方法是对于有缺失值的情况下，用自己所有实验的平均值来填补，corr_align_list_dimension_add(target_file, rtt_type)
 # 第二种方法是对于某一probe在某一时刻有缺失时，剔除其余所有probes在此时刻的rtt值，corr_align_list_dimension_remove(target_file, rtt_type)
@@ -297,6 +315,10 @@ def corr_align_list_dimension_add(target_file, rtt_type):
     #         print '\t{:<12}\t{:<36}'.format(probe_name, output_dict[dst][probe_name])
     return output_dict
 
+
+
+# ======================================================================================================================
+# 此函数
 def corr_align_list_dimension_remove(target_file, rtt_type):
     input_dict = get_dict_rtt_from_json2csv_file(target_file, rtt_type)
     output_dict = {}
@@ -352,6 +374,7 @@ def corr_align_list_dimension_remove(target_file, rtt_type):
     return output_dict
 
 
+# ======================================================================================================================
 # Pick up the correlation only associated with a dedicated probe
 # input = corr_align_list_dimension_add(target_file, rtt_type)
 #         or
@@ -368,6 +391,7 @@ def pick_up_corr_dedicated_probe(target_file, rtt_type, probe):
 
 
 
+# ======================================================================================================================
 # 此函数对已得到的针对某一特定 probe 的 correlation 列表求平均值
 # input = pick_up_corr_dedicated_probe(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)
 # output = [FranceIX_LISP-Lab_correlation, LISP-Lab_LISP-Lab_correlation, mPlane_LISP-Lab_correlation, rmd_LISP-Lab_correlation, ]
@@ -379,6 +403,7 @@ def means_correlation(target_file, rtt_type, probe):
     return matrix_corr.mean(0)
 
 
+# ======================================================================================================================
 # 此函数为 input dict 的每一个 key 计算 CDF
 # input = dict{'key_1': value_1, 'key_2': value_2, 'key_3': value_3, 'key_4': value_4}
 # output = dict{'key_1': cdf_1, 'key_2': cdf_2, 'key_3': cdf_3, 'key_4': cdf_4}
@@ -402,6 +427,9 @@ def cdf_for_dict(target_file):
     return cdf_dict
 
 
+
+
+# ======================================================================================================================
 # pdf list ==> cdf list
 # input = pdf_lidt[pdf1, pdf2, ...]
 # output = cdf_list[cdf1, cdf2, ...]
@@ -417,6 +445,167 @@ def cdf_from_pdf_list(pdf_list):
 
 
 
+
+# ======================================================================================================================
+# pdf dict ==> cdf dict
+# input = pdf_dict['index_1':pdf_1, 'index_2':pdf_2, ...]
+# output = cdf_dict['index_1':cdf_1, 'index_2':cdf_2, ...]
+# 因为输入是 dict，所以是无序的，不一定是按由小到大顺序排列，所以需要特殊处理
+def cdf_from_pdf_dict(pdf_dict):
+    sorted_pdf_tuple = sorted(pdf_dict.items(), key=lambda e:e[0], reverse=False)      # 升序时为 False 可以省略不写
+    print sorted_pdf_tuple
+
+    sorted_cdf_dict = {}
+    sorted_keys = [i[0] for i in sorted_pdf_tuple]
+    print sorted_keys
+    cdf_temp = 0.0
+    for i in sorted_pdf_tuple:
+        sorted_cdf_dict[i[0]] = cdf_temp + i[1]
+        cdf_temp = cdf_temp + i[1]
+
+    return sorted_cdf_dict
+
+
+
+# ======================================================================================================================
+# 为一组 RTT series 剔除 -1
+# input = [RTT_1, RTT_2, ..., -1, RTT_n]
+# output = [RTT_1, RTT_2, ..., -1, RTT_n]
+# list长度自然减少了 -1 的个数
+def remove_nonvalid_rtt(target_rtt_list):
+    return [x for x in target_rtt_list if x != -1]
+
+
+
+
+# ======================================================================================================================
+# 为一组 RTT series 统计 -1 个数，进而求其百分比
+# input = [RTT_1, RTT_2, ..., -1, RTT_n]
+# output = -1 个数的百分比
+def valid_rtt_percentage_calculator(target_rtt_list):
+    num = 0.0
+    for rtt in target_rtt_list:
+        if rtt != -1:
+            num = num + 1.0
+
+    print num / float(len(target_rtt_list)) * 100.0
+    return num / float(len(target_rtt_list)) * 100.0
+
+
+
+
+# ======================================================================================================================
+# 此函数计算针对一个 probe 对多个 dest 收集到的多个 RTT series 的稳健性，
+# 因为有时 probe 会收不到来自一个 dest 的 ping 回复
+# input = 某一个 probe 对不同 dest 的不同 RTT series 的字典，key 为 dest
+# output = [percentage_1, percentage_2, ...]   (共有 dest 数个 percentage 为 list 元素)
+def probe_robustness_calculator(probe_rtt_dict):
+    # print "##########################################"
+    # print "probe_robustness_calculator(probe_rtt_dict) is called"
+    # print probe_rtt_dict
+
+    robust_list = []
+    for dest in probe_rtt_dict.keys():
+        print "dest ==", dest
+        robust_list.append(valid_rtt_percentage_calculator(probe_rtt_dict[dest]))
+
+    # print "robust_list:", robust_list
+    return robust_list
+
+
+
+
+# ======================================================================================================================
+# 此函数为所有参与实验的 probe 一起进行 robustness 的计算，调用 probe_robustness_calculator(probe_rtt_dict) 并最终返回一个 dict
+# input = dict  (2 层字典，第一层 key 是 probe，第二层 key 是 dest, value 为 RTT series)
+# output = dict (1 层字典，key 为 probe，value 为 1 list)
+def all_probe_robustness_calculator():
+    # print "##########################################"
+    # print "all_probe_robustness_calculator() is called"
+
+    probe_robust_list = {}
+    probe_dest_rtt_dict = reverse_dict_keys(get_dict_rtt_from_json2csv_file(JSON2CSV_FILE, RTT_TYPE))
+
+    for probe in probe_dest_rtt_dict.keys():
+        print "probe ====", probe
+        probe_robust_list[probe] = probe_robustness_calculator(probe_dest_rtt_dict[probe])
+
+    # print "probe_robust_list:", probe_robust_list
+    return probe_robust_list
+
+
+
+
+# ======================================================================================================================
+# 此函数为所有参与实验的 probe 一起进行 robustness 的 PDF 计算
+def all_probe_robustness_pdf_calculator():
+    d = all_probe_robustness_calculator()
+    pdf_dict = {}
+    for probe in d.keys():
+        pdf_dict[probe] = math_tool.sequence_pdf_producer(d[probe], INTERVAL)
+
+    return pdf_dict
+
+
+
+
+# ======================================================================================================================
+# 此函数为所有参与实验的 probe 一起进行 robustness 的 CDF 计算
+def all_probe_robustness_cdf_calculator():
+    d = all_probe_robustness_calculator()
+    print d
+    cdf_dict = {}
+    for probe in d.keys():
+        pdf_dict = all_probe_robustness_pdf_calculator()
+        cdf_dict[probe] = cdf_from_pdf_dict(pdf_dict[probe])
+
+    return cdf_dict
+
+
+
+
+
+# ======================================================================================================================
+# 此函数逐项计算两个 list 中元素的差值
+# input = list_a, list_b
+# output = list_diff (list_a - list_b 的值)
+def diff_of_list_calculator(list_a, list_base):
+    list_diff = []
+
+    if len(list_a) == len(list_base):
+        for i in range(0, len(list_a)):
+            list_diff.append(list_a[i] - list_base[i])
+    else:
+        print "The length of two lists are not same, we cannot calculate their difference !!"
+
+    return list_diff
+
+
+
+# ======================================================================================================================
+# 此函数与 diff_of_list_calculator() 函数类似，计算 2 个 RTT series list 的 relative performance：(slower-faster)/faster
+# input = list_a, list_b
+# output = list_relative    (list_a 和 list_b 的每个值的 (slower-faster)/faster )
+# 得到结果若为正，说明 list_a[i] > list_b[i]；为负则是 list_a[i] < list_b[i]
+def relative_performance_list_calculator(list_a, list_b):
+    list_relative = []
+
+    if len(list_a) == len(list_b):
+        for i in range(0, len(list_a)):
+            if list_a[i] >= list_b[i]:
+                list_relative.append((list_a[i] - list_b[i]) / list_a[i])
+            else:
+                list_relative.append((list_a[i] - list_b[i]) / list_b[i])
+    else:
+        print "The length of two lists are not same, we cannot calculate their difference !!"
+
+    return list_relative
+
+
+
+
+# ======================================================================================================================
+# main
 if __name__ == "__main__":
     # print means_of_variance_calculator(TARGET_CSV_TRACES)
     # print minimum_rtt_calculator(TARGET_CSV_TRACES)
@@ -426,4 +615,14 @@ if __name__ == "__main__":
     # print corr_align_list_dimension_remove(JSON2CSV_FILE, RTT_TYPE)
     # print pick_up_corr_dedicated_probe(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)
     # print means_correlation(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)
-    cdf_for_dict(TARGET_CSV_TRACES)
+    # cdf_for_dict(TARGET_CSV_TRACES)
+    # print relative_performance_list_calculator([2.0,9.0,5.0,6.0], [7.0,5.0,3.0,2.0])
+
+    # d = {'a': [2,5.8,-1,4], 'b': [-1,-1,6,13.5]}
+    # print probe_robustness_calculator(d)
+
+    # print get_dict_rtt_from_json2csv_file(JSON2CSV_FILE, RTT_TYPE)
+    # print reverse_dict_keys(get_dict_rtt_from_json2csv_file(JSON2CSV_FILE, RTT_TYPE))
+    print all_probe_robustness_cdf_calculator()
+    # pd.DataFrame(all_probe_robustness_cdf_calculator()).plot()
+    # plt.show()

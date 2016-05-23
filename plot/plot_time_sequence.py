@@ -9,36 +9,28 @@ import matplotlib.pyplot as plt
 import numpy as np
 import re
 import matplotlib as mpl
+import pandas as pd
 
 mpl.rcParams['text.usetex'] = True
 mpl.rcParams.update({'figure.autolayout': True})
 
 
 # ==========================================Section: constant variable declaration======================================
-# probe id和此probe的IP地址间的对应关系
-PROBE_NAME_ID_DICT = {
-
-    "FranceIX": "6118",
-    "mPlane": "13842",
-    "rmd": "16958",
-    "LISP-Lab": "22341"
-}
-
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '4_probes_to_alexa_top50'  # Needs to change
 TARGET_CSV_TRACES = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))
-RTT_TYPE = 'avg'
-TARGET_CSV_TRACES_CDF = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}.csv'.format(RTT_TYPE))
-FILE_PATH_CDF_FIGURE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'CDF_RTT_{0}.eps'.format(RTT_TYPE))
-FILE_PATH_CSV_COMP = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'comp_RTTs_between_probes_{0}.eps'.format(RTT_TYPE))
+RTT_TYPE_TARGET = 'avg'
+TARGET_CSV_TRACES_CDF = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}.csv'.format(RTT_TYPE_TARGET))
+FILE_PATH_CDF_FIGURE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'CDF_figures')
+FILE_PATH_CSV_COMP = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'comp_RTTs_between_probes_{0}.eps'.format(RTT_TYPE_TARGET))
 
 # The title shown on the figure
 # The full path and figure name
 # 因为要从 TARGET_CSV_TRACES 中一下生成 destination 数目个 figure，所以此处是定义出要存 figure 的路径，
 # 具体名称在生成图的时候按照 destination 给出
 FIGURE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'time_sequence')  # Needs to change
-RTT_TYPE = 'max'    # 'min' or 'avg' or 'max'
+RTT_TYPE_FIGURE = 'avg'    # 'min' or 'avg' or 'max'
 X_LABEL = 'experiment number'
 Y_LABEL = 'rtt (ms)'
 
@@ -69,11 +61,11 @@ def plot_time_sequence(probes_rtt_dict, target_variable, generate_variable):
 
     # 检查是否有 os.path.join(FIGURE_PATH, RTT_TYPE) 存在，不存在的话creat
     try:
-        os.stat(os.path.join(FIGURE_PATH, RTT_TYPE))
+        os.stat(os.path.join(FIGURE_PATH, RTT_TYPE_FIGURE))
     except:
-        os.makedirs(os.path.join(FIGURE_PATH, RTT_TYPE))
+        os.makedirs(os.path.join(FIGURE_PATH, RTT_TYPE_FIGURE))
 
-    plt.savefig(os.path.join(FIGURE_PATH, RTT_TYPE, '{0}.eps'.format(target_variable)), dpi=300)
+    plt.savefig(os.path.join(FIGURE_PATH, RTT_TYPE_FIGURE, '{0}.eps'.format(target_variable)), dpi=300)
     # 每画一次图一定要 close 掉 ！！否则会不停叠加 ！！
     plt.close()
 
@@ -173,7 +165,7 @@ def get_probe_list(target_file):
 # 此函数可以画出 CDF figure
 # input = 想要生成 CDF 的 file
 # output ＝ 存储在相应路径下的一张图
-def plot_cdf(target_file, saving_path_name):
+def plot_cdf_from_file(target_file, saving_path_name):
     cdf_dict = paa.cdf_for_dict(target_file)
     for probe_key in cdf_dict.keys():
         x_axis = range(0, len(paa.cdf_for_dict(target_file)[probe_key]))
@@ -188,7 +180,7 @@ def plot_cdf(target_file, saving_path_name):
     plt.yticks(fontsize=40, fontname = 'Times New Roman')
     plt.legend(loc='best', fontsize=40)
     plt.grid(True)
-    plt.savefig(saving_path_name, dpi=300, transparent=True)
+    # plt.savefig(os.path.join(FILE_PATH_CDF_FIGURE, 'CDF_RTT_{0}.eps'.format(RTT_TYPE_TARGET)), dpi=300, transparent=True)
     plt.show()
 
 # 此函数用做画出 probes 对不同 destinations 产生的平均 RTT 的比较情况，可以 anchor 为参考目标得出各个probe与其的差值
@@ -236,9 +228,33 @@ def comp_means_rtt_dests(target_file, saving_path_name):
 
 
 
+# ======================================================================================================================
+# 此函数可以画出 CDF figure
+# input = 想要生成 CDF 的 dict
+# output ＝ 存储在相应路径下的一张图
+def plot_cdf_from_dict(dict_to_plot):
+    data = pd.DataFrame(dict_to_plot)
+    print data
+    data.plot(linewidth = 5)
+    plt.xlabel(r"\textrm{robustness (\%)}", font)
+    plt.ylabel(r"\textrm{cdf}", font)
+    plt.xticks(fontsize=30, fontname="Times New Roman")
+    plt.yticks(fontsize=30, fontname="Times New Roman")
+    plt.legend(loc='best', fontsize=30)
+    plt.savefig(os.path.join(FILE_PATH_CDF_FIGURE, 'CDF_robustness_{0}.eps'.format(RTT_TYPE_TARGET)), dpi=300, transparent=True)
+    plt.show()
+
+    return pd.DataFrame(dict_to_plot)
+
+
 
 
 if __name__ == "__main__":
+    # 检查是否有 os.path.join(TARGET_HISTOGRAM_PATH) 存在，不存在的话 create
+    try:
+        os.stat(os.path.join(FILE_PATH_CDF_FIGURE))
+    except:
+        os.makedirs(os.path.join(FILE_PATH_CDF_FIGURE))
     # if GENERATE_VARIABLE == 'dest':
     #     for dest in get_dest_list(TARGET_CSV_TRACES):
     #         plot_time_sequence(probes_rtt_dict_finder(TARGET_CSV_TRACES, dest, RTT_TYPE), dest, GENERATE_VARIABLE)
@@ -248,5 +264,6 @@ if __name__ == "__main__":
 
     #comp_means_rtt_dests(TARGET_CSV_TRACES_CDF, FILE_PATH_CSV_COMP)
 
-    plot_cdf(TARGET_CSV_TRACES_CDF, FILE_PATH_CDF_FIGURE)
+    # plot_cdf_from_file(TARGET_CSV_TRACES_CDF, FILE_PATH_CDF_FIGURE)
+    plot_cdf_from_dict(paa.all_probe_robustness_cdf_calculator())
 

@@ -40,12 +40,12 @@ TARGET_JSON_TRACES_DIR = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMEN
 ANALYZED_TRACE_FILE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME)
 
 # 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
-GENERATE_TYPE = 'TRACEROUTE'  # 'PING' or 'TRACEROUTE'
+GENERATE_TYPE = 'PING'  # 'PING' or 'TRACEROUTE'
 IP_VERSION = 'IPv4'  # 'IPv6'
 RTT_TYPE = 'avg'    # 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
 MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
-
+CALCULATE_TYPE = 'median'   # 'mean' or 'median'
 
 # ======================================================================================================================
 # 此函数从只存有 measurement_id 的.txt文档里读出所有的 measurement_id 以 list 形式返回
@@ -112,14 +112,20 @@ def ping_traces_resume(mes_id, probe_ids, rtt_type):
                 else:
                     rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(0)
 
+    print rtt_probes_dict
     for key in rtt_probes_dict.keys():
-        rtt_probes_dict[key].append(round(np.mean(rtt_probes_dict[key]), 2))
+        # 按照 CALCULATE_TYPE 计算相应结果
+        if CALCULATE_TYPE == 'mean':
+            rtt_probes_dict[key].append(round(np.mean(rtt_probes_dict[key]), 2))
+        elif CALCULATE_TYPE == 'median':
+            rtt_probes_dict[key].append(round(np.median(rtt_probes_dict[key]), 2))
         # 因为我们把means存在了 rtt_probes_dict[key] list中的最后一个元素，为了不影响下一行求std的结果，
         # std的input范围应不包含list的最后一个元素即means值本身，[:-1] 即表示从list的第一个元素到倒数第二个元素
         rtt_probes_dict[key].append(round(np.std(rtt_probes_dict[key][:-1]), 2))
         dst_addr = str(json_data[0]["dst_addr"])
 
 
+    print "dest ---->", dst_addr
     return dst_addr, rtt_probes_dict
 
 
@@ -205,7 +211,7 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
 
 
     if command == "PING":
-        report_name_ping = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report_{2}.csv".format(command, name, rtt_type))
+        report_name_ping = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report_{2}_{3}.csv".format(command, name, rtt_type, CALCULATE_TYPE))
         # 检查是否有 os.path.join(ANALYZED_TRACE_FILE) 存在，部存在的话creat
         try:
             os.stat(os.path.join(ANALYZED_TRACE_FILE))
@@ -217,7 +223,7 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
             a = csv.writer(f_handler, dialect='excel', delimiter=";")
             csv_title = ['mesurement id', 'Destination']
             csv_title.extend(
-                ["{0}({0} RTT) from {1}".format(rtt_type, probe_name) for probe_name in probe_name_list ]
+                ["avg({0} RTT) from {1}".format(rtt_type, probe_name) for probe_name in probe_name_list ]
             )
             csv_title.extend(
                 ["variance from {1}".format(rtt_type, probe_name) for probe_name in probe_name_list]

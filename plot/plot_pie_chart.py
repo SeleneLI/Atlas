@@ -8,10 +8,10 @@ import re
 import analyze_traces.ping_associated_analyzer as paa
 import analyze_traces.traceroute_associated_analyzer as taa
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-
-mpl.rcParams['text.usetex'] = True
-mpl.rcParams.update({'figure.autolayout': True})
+# import matplotlib as mpl
+#
+# mpl.rcParams['text.usetex'] = True
+# mpl.rcParams.update({'figure.autolayout': True})
 
 
 # ==========================================Section: constant variable declaration======================================

@@ -9,14 +9,6 @@ import csv
 
 
 # ==========================================Section: constant variable declaration======================================
-# probe id和此probe的IP地址间的对应关系
-PROBE_NAME_ID_DICT = {
-
-    "6118": "FranceIX",
-    "13842": "mPlane",
-    "16958": "rmd",
-    "22341": "LISP-Lab"
-}
 
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
@@ -105,7 +97,7 @@ def probes_dest_rtt_csv_producer(target_files, stored_file):
 
 
                     for probe in probes:
-                        rtts = [dest, PROBE_NAME_ID_DICT[str(probe)]]
+                        rtts = [dest, PROBE_ID_NAME_DICT[str(probe)]]
                         for rtt in rtts_probes[probe]:
                             rtts.append("/".join([str(element) for element in rtt]))
 

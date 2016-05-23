@@ -10,11 +10,17 @@ import sys
 import time
 import calendar
 import math
+from config.config import *
 
 # AUTH = "%s/auth" % os.environ['PWD'] # put the KEY in file named 'auth' under current folder
 AUTH = os.path.join(os.path.dirname(__file__), "auth")
 
-def ping(target):
+MEASUREMENT_NAME = '4_probes_to_alexa_top50'
+MES_ID_PING_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_ping_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
+MES_ID_TRACEROUTE_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
+
+
+def ping(target, mes_id_file):
     requests.packages.urllib3.disable_warnings() #disable urllib3 warnings
     # Measurement definition
     #target = 'www.enst.fr'
@@ -83,8 +89,9 @@ def ping(target):
     results.raise_for_status()
     measure_id = int(results.json()["measurements"][0])
     print("Measurement #%s created, please wait the result (it may be long)" % (measure_id))
+    mes_id_file.write(measure_id, '\n')
 
-def traceroute(target):
+def traceroute(target, mes_id_file):
     requests.packages.urllib3.disable_warnings() #disable urllib3 warnings
     # Measurement definition
     #target = 'www.enst.fr'
@@ -156,6 +163,7 @@ def traceroute(target):
     results.raise_for_status()
     measure_id = int(results.json()["measurements"][0])
     print("Measurement #%s created, please wait the result (it may be long)" % (measure_id))
+    mes_id_file.write(measure_id, '\n')
 
 if __name__ == "__main__":
     target_site_l = [ u'Facebook.com', u'Youtube.com', u'Baidu.com', u'Yahoo.com', u'Amazon.com',
@@ -172,10 +180,11 @@ if __name__ == "__main__":
                       u'Naver.com', u'Amazon.in', u'Espn.go.com', u'Xhamster.com', u'Flipkart.com'
     ]
 
-    target_site_l = [str(e) for e in target_site_l]
-    for target in target_site_l:
-        try:
-            ping(target)
-            traceroute(target)
-        except requests.exceptions.HTTPError:
-            print "Due to unknown cause, cannot launch mesurement for {0}".format(target)
+    with open(MES_ID_PING_FILE, 'w') as ping_file, open(MES_ID_TRACEROUTE_FILE, 'w') as traceroute_file:
+        target_site_l = [str(e) for e in target_site_l]
+        for target in target_site_l:
+            try:
+                ping(target, ping_file)
+                traceroute(target, traceroute_file)
+            except requests.exceptions.HTTPError:
+                print "Due to unknown cause, cannot launch mesurement for {0}".format(target)
