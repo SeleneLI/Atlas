@@ -19,10 +19,14 @@ EXPERIMENT_NAME = '4_probes_to_alexa_top50'
 RTT_TYPE = 'avg'
 TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}_AS.csv'.format(RTT_TYPE))
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))
+TARGET_CSV_DIFF = os.path.join(ATLAS_TRACES, 'json2csv', '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
 
 # 为计算某一特定 probe 的 correlation 时才需此参数
 CORR_PROBE = 'LISP-Lab'     # 'FranceIX' or 'LISP-Lab' or 'mPlane' or 'rmd'
 INTERVAL = 1.0
+
+# 计算差值时的参考 probe
+REF_PROBE = 'FranceIX'
 
 # ======================================================================================================================
 # 此函数对targeted_file进行计算处理，可得到每个probe在整个实验中的variance的平均数
@@ -572,6 +576,7 @@ def all_probe_robustness_cdf_calculator():
 def diff_of_list_calculator(list_a, list_base):
     list_diff = []
 
+
     if len(list_a) == len(list_base):
         for i in range(0, len(list_a)):
             list_diff.append(list_a[i] - list_base[i])
@@ -601,6 +606,79 @@ def relative_performance_list_calculator(list_a, list_b):
 
     return list_relative
 
+# 此函数以 FranceIX 为参考计算其差值，可以返回 means 和 variance
+# input = { 'probe_1': [],
+#           'probe_2': [],
+#           'probe_3': [],
+#           'probe_4': [],
+#                           },
+#           ref_probe   # 以哪个 probe 为参考对象点
+# output:
+#       dict_mean = { 'probe_1': mean_1,
+#                     'probe_2': mean_2,
+#                     'probe_3': mean_3}
+#       dict_var  = { 'probe_1': var_1,
+#                     'probe_2': var_2,
+#                     'probe_3': var_3}
+def difference_calculator_mean_var(target_dict, ref_probe):
+    dict_mean = {}
+    dict_var = {}
+
+    for key in target_dict.keys():
+        if key != ref_probe:
+            dict_mean[key] = np.mean(abs(np.matrix(target_dict[key]) - np.matrix(target_dict[ref_probe])).tolist()[0])
+            dict_var[key] = np.var(abs(np.matrix(target_dict[key]) - np.matrix(target_dict[ref_probe])).tolist()[0])
+
+    return dict_mean, dict_var
+
+
+
+# 此函数从 .csv file 中读入数值并以 dest 为 key 依次调用 difference_calculator(target_dict, ref_probe)
+# input = .csv_file
+# output:
+#       dict_mean = {'probe_1': {'dest_1': mean_1}, {'dest_1': mean_1}, ..., {'dest_1': mean_50},
+#                    'probe_2': {'dest_1': mean_1}, {'dest_1': mean_1}, ..., {'dest_1': mean_50},
+#                    'probe_3': {'dest_1': mean_1}, {'dest_1': mean_1}, ..., {'dest_1': mean_50}
+#                   }
+#       dict_var  = {'probe_1': {'dest_1': var_1}, {'dest_1': var_1}, ..., {'dest_1': var_50},
+#                    'probe_2': {'dest_1': var_1}, {'dest_1': var_1}, ..., {'dest_1': var_50},
+#                    'probe_3': {'dest_1': var_1}, {'dest_1': var_1}, ..., {'dest_1': var_50}
+#                   }
+def difference_calculator(target_file, ref_probe):
+
+    # 把 .csv_file 里的元素转化到 dict_dest_probe_rtts = {} 里来
+    dict_dest_probe_rtts = {}
+    with open(target_file) as f_handler:
+        next(f_handler)
+        for line in f_handler:
+            line_list = line.split(";")
+            if line_list[0] not in dict_dest_probe_rtts.keys():
+                dict_dest_probe_rtts[line_list[0]] = {}
+                dict_dest_probe_rtts[line_list[0]][line_list[1]] = [float(element) for element in line_list[2:]]
+            elif line_list[0] in dict_dest_probe_rtts.keys():
+                dict_dest_probe_rtts[line_list[0]][line_list[1]] = [float(element) for element in line_list[2:]]
+
+    # 依次对 key 调用 difference_calculator(target_dict, ref_probe)
+    # 把结果以 probe 为 key 以此记录下来
+    dict_probe_dest_mean = {}
+    dict_probe_dest_var = {}
+    for key_dest in dict_dest_probe_rtts.keys():
+        dict_mean_temp, dict_var_temp = difference_calculator_mean_var(dict_dest_probe_rtts[key_dest], ref_probe)
+        for key_probe in dict_mean_temp.keys():
+            if key_probe not in dict_probe_dest_mean.keys():
+                dict_probe_dest_mean[key_probe] = {}
+                dict_probe_dest_mean[key_probe][key_dest] = dict_mean_temp[key_probe]
+                dict_probe_dest_var[key_probe] = {}
+                dict_probe_dest_var[key_probe][key_dest] = dict_var_temp[key_probe]
+            else:
+                dict_probe_dest_mean[key_probe][key_dest] = dict_mean_temp[key_probe]
+                dict_probe_dest_var[key_probe][key_dest] = dict_var_temp[key_probe]
+
+
+    print "dict_probe_dest_mean =", dict_probe_dest_mean
+    print "dict_probe_dest_var =", dict_probe_dest_var
+    return dict_probe_dest_mean, dict_probe_dest_var
+
 
 
 
@@ -614,7 +692,7 @@ if __name__ == "__main__":
     # print corr_align_list_dimension_add(JSON2CSV_FILE, RTT_TYPE)
     # print corr_align_list_dimension_remove(JSON2CSV_FILE, RTT_TYPE)
     # print pick_up_corr_dedicated_probe(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)
-    # print means_correlation(JSON2CSV_FILE, RTT_TYPE, CORR_PROBE)
+
     # cdf_for_dict(TARGET_CSV_TRACES)
     # print relative_performance_list_calculator([2.0,9.0,5.0,6.0], [7.0,5.0,3.0,2.0])
 
@@ -626,3 +704,7 @@ if __name__ == "__main__":
     print all_probe_robustness_cdf_calculator()
     # pd.DataFrame(all_probe_robustness_cdf_calculator()).plot()
     # plt.show()
+
+    dict_probe_dest_mean = {}
+    dict_probe_dest_var = {}
+    dict_probe_dest_mean, dict_probe_dest_var = difference_calculator(TARGET_CSV_DIFF, REF_PROBE)
