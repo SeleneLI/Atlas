@@ -7,6 +7,7 @@ __author__ = 'yueli'
 import pprint
 from config.config import *
 import numpy as np
+import scipy.stats as st
 import re
 from scipy.stats import pearsonr
 import rpy2.robjects as robjects
@@ -31,7 +32,7 @@ DIMENSION = EXP_SPAN/EXP_INTERVAL
 FIGURE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'time_sequence')
 # 函数 csv_file_pick_rtt_series 执行后的output所需调用的函数，目前可为： 'periodicity' or 'rtt_statistics' or 'autocorr_plot'
 ACTION = 'periodicity'    # 当 ACTION = 'autocorr_plot' 时可以通过手动关闭plot出来的autocorr图来进入下一张
-
+CONFIDENCE = 0.95
 
 
 # ======================================================================================================================
@@ -235,6 +236,14 @@ def rtt_statistics(rtt_series, dest, probe):
     plt.savefig(os.path.join(FIGURE_PATH, 'rtt_statistics', RTT_TYPE, probe, '{0}.eps'.format(dest)), dpi=300)
     plt.close()
 
+
+
+# ======================================================================================================================
+# 此函数用于给定一个置信度(confidence)计算某样本的置信区间(confidence interval)
+def confidence_interval(series):
+    confidence_interval = st.t.interval(CONFIDENCE, len(series) - 1, loc=np.mean(series), scale=st.sem(series))
+
+    return confidence_interval
 
 
 
