@@ -19,6 +19,7 @@ EXPERIMENT_NAME = '4_probes_to_alexa_top50'
 RTT_TYPE = 'avg'
 TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}_AS.csv'.format(RTT_TYPE))
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))
+JSON2CSV_FILE_ALL = os.path.join(ATLAS_TRACES, 'json2csv', '{0}_all.csv'.format(EXPERIMENT_NAME))
 TARGET_CSV_DIFF = os.path.join(ATLAS_TRACES, 'json2csv', '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
 
 # 为计算某一特定 probe 的 correlation 时才需此参数
@@ -27,6 +28,10 @@ INTERVAL = 1.0
 
 # 计算差值时的参考 probe
 REF_PROBE = 'FranceIX'
+
+# 为计算某一特定 probe 的 confidence interval 时才需此参数
+CI_PROBE = 'LISP-Lab'     # 'FranceIX' or 'LISP-Lab' or 'mPlane' or 'rmd'
+
 
 # ======================================================================================================================
 # 此函数对targeted_file进行计算处理，可得到每个probe在整个实验中的variance的平均数
@@ -195,6 +200,30 @@ def get_dest_probe_rtt(targeted_file, dest, rtt_type):
 
     return dict_probe_rtt
 
+
+# ======================================================================================================================
+# 此函数可以从 JSON2CSV_FILE 读入的 csv 文件中提取出针对某一特定 probe 的以 dest 为字典 keys，以 RTT series 为字典 values 的字典
+# input: JSON2CSV_FILE（会按照文件名格式判断读入 rtt 的方式）
+# output: 针对某一给定 probe 的 dict{ 'dest_1': [rtt_1, rtt_2, rtt_3, ...],
+#                                  'dest_2': [rtt_1, rtt_2, rtt_3, ...],
+#                                  'dest_3': [rtt_1, rtt_2, rtt_3, ...],
+#                                  'dest_4': [rtt_1, rtt_2, rtt_3, ...]
+#                                 }
+# 注意此函数只是按原 csv trace 提取数据，会有 -1 记录在内，如果不要 -1 还需进一步继续作处理
+def get_probe_dest_rtt(targeted_file, probe, rtt_type):
+    dict_dest_rtt = {}
+    rtt_type_index = {'min': 0, 'avg': 1, 'max': 2}
+
+    with open(targeted_file) as f_handler:
+        next(f_handler)
+        for line in f_handler:
+            if line.split(';')[1] == probe:
+                if line.split(';')[0] not in dict_dest_rtt.keys():
+                    dict_dest_rtt[line.split(';')[0]] = []
+                for element in line.split(';')[2:]:
+                    dict_dest_rtt[line.split(';')[0]].append(float(element.split('/')[rtt_type_index[rtt_type]]))
+
+    return dict_dest_rtt
 
 
 
@@ -701,10 +730,11 @@ if __name__ == "__main__":
 
     # print get_dict_rtt_from_json2csv_file(JSON2CSV_FILE, RTT_TYPE)
     # print reverse_dict_keys(get_dict_rtt_from_json2csv_file(JSON2CSV_FILE, RTT_TYPE))
-    print all_probe_robustness_cdf_calculator()
+    # print all_probe_robustness_cdf_calculator()
     # pd.DataFrame(all_probe_robustness_cdf_calculator()).plot()
     # plt.show()
 
-    dict_probe_dest_mean = {}
-    dict_probe_dest_var = {}
-    dict_probe_dest_mean, dict_probe_dest_var = difference_calculator(TARGET_CSV_DIFF, REF_PROBE)
+    # dict_probe_dest_mean = {}
+    # dict_probe_dest_var = {}
+    # dict_probe_dest_mean, dict_probe_dest_var = difference_calculator(TARGET_CSV_DIFF, REF_PROBE)
+    print get_probe_dest_rtt(JSON2CSV_FILE_ALL, CI_PROBE, RTT_TYPE)

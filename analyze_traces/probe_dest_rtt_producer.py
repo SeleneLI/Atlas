@@ -17,7 +17,7 @@ TARGET_TRACES_PATH = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NA
 PING_MEASUREMENT_ID_LIST = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_measurement_ids_success.txt'.format(EXPERIMENT_NAME))
 
 # 想要生成的 .csv file 中 RTT 的type，若为空则全写进去
-RTT_TYPE = 'all'    # 'min' or 'avg' or 'max' or 'all'
+RTT_TYPE = 'avg'    # 'min' or 'avg' or 'max' or 'all'
 
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
 

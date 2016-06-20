@@ -4,22 +4,19 @@
 __author__ = 'yueli'
 
 
-import pprint
 from config.config import *
 import numpy as np
 import scipy.stats as st
-import re
 from scipy.stats import pearsonr
-import rpy2.robjects as robjects
 import matplotlib.pyplot as plt
-from math import *
 import collections
 import pandas as pd
 from pandas.tools.plotting import autocorrelation_plot
+import ping_associated_analyzer as paa
 
 # ==========================================Section: constant variable declaration======================================
 EXPERIMENT_NAME = '4_probes_to_alexa_top50'
-RTT_TYPE = 'max'
+RTT_TYPE = 'avg'
 
 # We define a CONSTANT variable: EXP_INTERVAL, to represent the time interval between two consecutive command
 # (e.g. ping or traceroute)
@@ -34,6 +31,10 @@ FIGURE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'time_sequ
 ACTION = 'periodicity'    # 当 ACTION = 'autocorr_plot' 时可以通过手动关闭plot出来的autocorr图来进入下一张
 CONFIDENCE = 0.95
 
+JSON2CSV_FILE_ALL = os.path.join(ATLAS_TRACES, 'json2csv', '{0}_all.csv'.format(EXPERIMENT_NAME))
+
+# 为计算某一特定 probe 的 confidence interval 时才需此参数
+CI_PROBE = 'LISP-Lab'     # 'FranceIX' or 'LISP-Lab' or 'mPlane' or 'rmd'
 
 # ======================================================================================================================
 # 此函数会返回一个list中最小值的一个或多个index，
@@ -240,11 +241,47 @@ def rtt_statistics(rtt_series, dest, probe):
 
 # ======================================================================================================================
 # 此函数用于给定一个置信度(confidence)计算某样本的置信区间(confidence interval)
+# input = RTT_series
+# output = confidence_interval
 def confidence_interval(series):
-    confidence_interval = st.t.interval(CONFIDENCE, len(series) - 1, loc=np.mean(series), scale=st.sem(series))
+    # 如果想看 confidence interval 的上下限的话，可以直接返回confidence_range，将得到一个 (value_low, value_high)
+    confidence_range = st.t.interval(CONFIDENCE, len(series) - 1, loc=np.mean(series), scale=st.sem(series))
+    # 如果只需要知道间隔，即：interval = value_high - value_low 的话，返回 confidence_interval
+    confidence_interval = confidence_range[1] - confidence_range[0]
 
     return confidence_interval
 
+
+
+# ======================================================================================================================
+# 此函数用于给一个<dest, probe> pair的RTT series计算confidence interval，其中对RTT series做过remove -1的处理
+# input = RTT_series
+# output = confidence_interval
+def dest_probe_confidence_interval(series):
+    return confidence_interval(paa.remove_nonvalid_rtt(series))
+
+
+
+# ======================================================================================================================
+# 此函数用于给一个指定好的 probe 所对应的所有 dest 的RTT series计算confidence interval，其中需对RTT series做remove -1的处理
+# input = 针对某一给定 probe 的 dict{ 'dest_1': [rtt_1, rtt_2, rtt_3, ...],
+#                                  'dest_2': [rtt_1, rtt_2, rtt_3, ...],
+#                                  'dest_3': [rtt_1, rtt_2, rtt_3, ...],
+#                                  'dest_4': [rtt_1, rtt_2, rtt_3, ...]
+#                                 }
+# output = 针对某一给定 probe 的 dict{ 'dest_1': confidence_interval,
+#                                  'dest_2': confidence_interval,
+#                                  'dest_3': confidence_interval,
+#                                  'dest_4': confidence_interval
+#                                 }
+def dests_probe_confidence_interval():
+    dict_dest_ci = {}
+
+    dict_dest_rtt_series = paa.get_probe_dest_rtt(JSON2CSV_FILE_ALL, CI_PROBE, RTT_TYPE)
+    for dest in dict_dest_rtt_series.keys():
+        dict_dest_ci[dest] = dest_probe_confidence_interval(dict_dest_rtt_series[dest])
+
+    return dict_dest_ci
 
 
 # ======================================================================================================================
@@ -255,7 +292,14 @@ if __name__ == "__main__":
     # print "y_sin:", y_sin
     # periodicity_verified_ftt(y_sin)
 
-    csv_file_pick_rtt_series(os.path.join(ATLAS_TRACES, 'json2csv', '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE)), ACTION)
+    # csv_file_pick_rtt_series(os.path.join(ATLAS_TRACES, 'json2csv', '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE)), ACTION)
+    results = dests_probe_confidence_interval()
+    with open('confidence_interval_for_every_dest', 'w') as f_handler:
+        f_handler.write("{0:15}:\t{1:15}\n".format('destination', 'confidence interval'))
+        for key, values in results.iteritems():
+            f_handler.write("{0:15}:\t{1:15}\n".format(key, values))
+
+
 
 
 
