@@ -21,6 +21,7 @@ import calendar
 import math
 from config.config import *
 import socket
+import subprocess
 
 
 
@@ -42,14 +43,19 @@ if __name__ == "__main__":
                     site_ip = ''
                     try:
                         site_ip = socket.gethostbyname(site_name)
-                        target_site_l.append([site_name, site_ip])
-                        spamewriter.writerow([site_name, site_ip])
+                        print "Processing ", site_name, site_ip
+                        cmd = "ping -c 5 {0}".format(site_ip)
+                        output = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True).communicate()[0]
+                        if "bytes from" in output.decode('utf-8'):
+                            target_site_l.append([site_name, site_ip])
+                            spamewriter.writerow([site_name, site_ip])
+                        else:
+                            print site_name, site_ip, "is Offline"
                         if len(target_site_l) == SITE_NB:
                             print SITE_NB, "sites have been retrieved. Stop now"
                             break
                     except:
                         print site_name, ': unknown host! Skipped'
-
 
     # convert each URL into Unicode
     with open(EXP_INPUT_F, 'r') as csvfile:
