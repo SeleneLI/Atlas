@@ -19,7 +19,7 @@ start_time = time.time()
 
 # ==========================================Section: constant variable declaration======================================
 # How many websites want to be finally stored
-SITE_NB = 500
+SITE_NB = 150
 # Top 1 million websites file downloaded from Alexa
 ALEXA_TOP_SITE_F = 'top_1m_Alexa.csv'
 # In which file to store the successfully ping and traceroute websites
