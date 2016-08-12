@@ -38,7 +38,7 @@ if __name__ == "__main__":
     if PARSE == True:
         with open(EXP_INPUT_F, 'w') as out_csvfile:
             spamewriter = csv.writer(out_csvfile, dialect='excel', delimiter=';')
-            spamewriter.writerow(['Site name', 'Site IP', 'Country'])
+            spamewriter.writerow(['Site name', 'Site IP', 'Country', 'Continent'])
 
             with open(ALEXA_TOP_SITE_F, 'r') as csvfile:
                 spamreader = csv.reader(csvfile, delimiter=',')
