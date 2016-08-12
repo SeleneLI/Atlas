@@ -460,9 +460,10 @@ def diff_bar_dict(target_dict, key_a, key_ref):
 
 def plot_diff_bar_dict(target_dict, key_a, key_ref, target_file):
     diff_dict, min_temp, max_temp = diff_bar_dict(target_dict, key_a, key_ref)
+    print "diff_dict:", diff_dict
     print "min_temp =", min_temp
     print "max_temp =", max_temp
-    pd.DataFrame(diff_dict).plot(kind='bar')
+    pd.DataFrame(diff_dict).plot(kind='bar', legend=False) # To disable legend appeared in the figure
     plt.axhline(0, color='k')
 
     y_axis, geo_temp, x_axis_ticks, x_axis_name = demarcate_regions(target_file)
@@ -478,11 +479,12 @@ def plot_diff_bar_dict(target_dict, key_a, key_ref, target_file):
         plt.ylabel(r"\textrm{RTT\_probe - RTT\_FranceIX (ms)}", font)
     plt.xticks(x_axis_ticks, x_axis_name, fontsize=40, fontname="Times New Roman", rotation='horizontal')   # 可加此变量，让横坐标的 name 竖直显示： rotation='vertical'
     plt.yticks(fontsize=40, fontname="Times New Roman")
-    plt.legend(loc=3, fontsize=40)
+    # plt.legend(loc=3, fontsize=40)
     plt.xlim(-0.5, geo_temp-0.5)
     plt.ylim(min(min_temp - 5.0, -150.0), max(max_temp + 5.0, 50.0))
     if key_a != '':
         plt.savefig(os.path.join(FIGURE_PATH_NAME, '{0}_diff_rtt_{1}_{2}_{3}_geo.eps'.format(EXPERIMENT_NAME, RELATIVE_KEY_A, RELATIVE_KEY_REF, CALCULATE_TYPE)), dpi=300, transparent=True)
+        print os.path.join(FIGURE_PATH_NAME, '{0}_diff_rtt_{1}_{2}_{3}_geo.eps'.format(EXPERIMENT_NAME, RELATIVE_KEY_A, RELATIVE_KEY_REF, CALCULATE_TYPE))
     else:
         plt.savefig(os.path.join(FIGURE_PATH_NAME, '{0}_diff_rtt_to_{1}_{2}_geo.eps'.format(EXPERIMENT_NAME, RELATIVE_KEY_REF, CALCULATE_TYPE)), dpi=300, transparent=True)
 
