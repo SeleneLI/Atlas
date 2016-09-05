@@ -331,8 +331,8 @@ if __name__ == "__main__":
 
     target_site_v4_l = []
     target_site_v6_l = []
-    # exp_input = 'top_510_websites_fr.csv'
-    exp_input = 'xak.csv'
+    exp_input = 'top_510_websites_fr.csv'
+    # exp_input = 'xak.csv'
     with open(exp_input) as exp_handler:
         reader = csv.reader(exp_handler, delimiter=';')
         next(reader)
@@ -343,12 +343,12 @@ if __name__ == "__main__":
             if len([i for i in csv_line if i != '']) > 4:
                 target_site_v6_l.append(csv_line[4])
 
-    print "target_site_v4_l:", target_site_v4_l
-    print "target_site_v6_l", target_site_v6_l
+    print "target_site_v4_l:", len(target_site_v4_l), target_site_v4_l
+    print "target_site_v6_l", len(target_site_v6_l), target_site_v6_l
 
     # with open(MES_ID_PING_V4_FILE, 'w') as ping_v4_file, open(MES_ID_PING_V6_FILE, 'w') as ping_v6_file, \
     #         open(MES_ID_TRACEROUTE_V4_FILE, 'w') as traceroute_v4_file, open(MES_ID_TRACEROUTE_V6_FILE, 'w') as traceroute_v6_file:
-    #     target_site_l = [str(e) for e in target_site_v4_l]
+    #     # target_site_l = [str(e) for e in target_site_v4_l]
     #     for target in target_site_v4_l:
     #         try:
     #             ping_v4(target, ping_v4_file)
