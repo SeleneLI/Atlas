@@ -9,8 +9,8 @@ start_time = time.time()
 dict_country = {}
 dict_continent = {}
 
-IN_FILE = 'exp_input_bck.csv'
-OUT_FILE = 'exp_input_bck_bck.csv'
+IN_FILE = 'exp_input_v1.csv'
+OUT_FILE = 'exp_input_bck.csv'
 
 with open(OUT_FILE, 'w') as out_csvfile:
     spamewriter = csv.writer(out_csvfile, dialect='excel', delimiter=';')
@@ -19,8 +19,9 @@ with open(OUT_FILE, 'w') as out_csvfile:
     with open(IN_FILE, 'r') as f_handler:
         next(f_handler)
         for line in f_handler:
-            row = [i.strip() for i in line.split(';')]
-            ip = row[1]
+            row = [line.split(';')[0].strip()]
+            ip = line.split(';')[1].strip()
+            row.append(ip)
             match = geolite2.lookup(ip)
 
             country = match.country

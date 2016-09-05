@@ -1,13 +1,6 @@
 # -*- coding: utf-8 -*-
-# 本script功能：
-# 提供开启 RIPE Atlas 上 ping 和 traceroute 的实验
-# 5 个 probes，编号分别为 22341, 13842, 16958 and anchor 6118
-# destination 是 Alexa top 150, http://www.alexa.com/topsites
-# !!注意!! 因为有些网站不允许被 ping，因而每爬一个网址都可先 ping 一下，确定对方有回复才记录下来成为实验开启的正式 destination
-#!/usr/bin/python
-
-# RIPE Atlas API demo
-# Ping measurement can be configured and created using this script
+# This script can do：
+# Get top 510 ping-able website IPv4 addresses from top_1m_Alexa.csv
 
 import csv
 import time
@@ -24,7 +17,7 @@ SITE_NB = 510
 # Top 1 million websites file downloaded from Alexa
 ALEXA_TOP_SITE_F = 'top_1m_Alexa.csv'
 # In which file to store the successfully ping and traceroute websites
-EXP_INPUT_F = 'exp_input.csv'
+EXP_INPUT_F = 'top_{0}_websites_IPv4.csv'.format(SITE_NB)
 
 
 
