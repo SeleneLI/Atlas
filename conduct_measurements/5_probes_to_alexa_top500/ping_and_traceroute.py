@@ -22,8 +22,8 @@ MES_ID_PING_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME,
 MES_ID_TRACEROUTE_V4_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v4_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
 MES_ID_TRACEROUTE_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v6_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
 
-STRAT_TIME = '2016-09-13 00:00:00'
-STOP_TIME = '2016-09-27 23:55:00'
+STRAT_TIME = '2016-09-13 15:00:00'
+STOP_TIME = '2016-09-28 14:55:00'
 
 def ping_v4(target, mes_id_file):
     requests.packages.urllib3.disable_warnings() #disable urllib3 warnings

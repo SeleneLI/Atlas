@@ -1,6 +1,6 @@
 Site name;Site IPv4;Country v4;Continent v4;Site IPv6;Country v6;Continent v6
-google.com;172.217.19.142;US;NA;2a00:1450:4007:805::200e;IE;EU
-youtube.com;172.217.19.142;US;NA;2a00:1450:4007:805::200e;IE;EU
+google.com;172.217.16.68;US;NA;2a00:1450:4007:806::2004;IE;EU
+youtube.com;172.217.16.78;US;NA;2a00:1450:4007:806::200e;IE;EU
 facebook.com;69.171.230.68;US;NA;2a03:2880:11:1f83:face:b00c::25de;US;NA
 baidu.com;111.13.101.208;CN;AS
 yahoo.com;98.139.183.24;US;NA;2001:4998:44:204::a7;US;NA
