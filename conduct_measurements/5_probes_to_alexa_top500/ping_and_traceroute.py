@@ -14,7 +14,7 @@ import math
 from config.config import *
 
 # AUTH = "%s/auth" % os.environ['PWD'] # put the KEY in file named 'auth' under current folder
-AUTH = os.path.join(os.path.dirname(__file__), "auth")
+AUTH = os.path.join(os.path.dirname(__file__), "auth_run")
 
 MEASUREMENT_NAME = '5_probes_to_alexa_top500'
 MES_ID_PING_V4_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_ping_v4_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
@@ -22,8 +22,8 @@ MES_ID_PING_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME,
 MES_ID_TRACEROUTE_V4_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v4_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
 MES_ID_TRACEROUTE_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v6_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
 
-STRAT_TIME = '2016-09-08 00:00:00'
-STOP_TIME = '2016-09-22 23:59:59'
+STRAT_TIME = '2016-09-13 00:00:00'
+STOP_TIME = '2016-09-27 23:55:00'
 
 def ping_v4(target, mes_id_file):
     requests.packages.urllib3.disable_warnings() #disable urllib3 warnings
@@ -346,25 +346,25 @@ if __name__ == "__main__":
     print "target_site_v4_l:", len(target_site_v4_l), target_site_v4_l
     print "target_site_v6_l", len(target_site_v6_l), target_site_v6_l
 
-    # with open(MES_ID_PING_V4_FILE, 'w') as ping_v4_file, open(MES_ID_PING_V6_FILE, 'w') as ping_v6_file, \
-    #         open(MES_ID_TRACEROUTE_V4_FILE, 'w') as traceroute_v4_file, open(MES_ID_TRACEROUTE_V6_FILE, 'w') as traceroute_v6_file:
-    #     # target_site_l = [str(e) for e in target_site_v4_l]
-    #     for target in target_site_v4_l:
-    #         try:
-    #             ping_v4(target, ping_v4_file)
-    #         except requests.exceptions.HTTPError:
-    #             print "Due to ping_v4, cannot launch mesurement for {0}".format(target)
-    #         try:
-    #             traceroute_v4(target, traceroute_v4_file)
-    #         except requests.exceptions.HTTPError:
-    #             print "Due to traceroute_v4, cannot launch mesurement for {0}".format(target)
-    #
-    #     for target in target_site_v6_l:
-    #         try:
-    #             ping_v6(target, ping_v6_file)
-    #         except requests.exceptions.HTTPError:
-    #             print "Due to ping_v6, cannot launch mesurement for {0}".format(target)
-    #         try:
-    #             traceroute_v6(target, traceroute_v6_file)
-    #         except requests.exceptions.HTTPError:
-    #             print "Due to traceroute_v6, cannot launch mesurement for {0}".format(target)
+    with open(MES_ID_PING_V4_FILE, 'w') as ping_v4_file, open(MES_ID_PING_V6_FILE, 'w') as ping_v6_file, \
+            open(MES_ID_TRACEROUTE_V4_FILE, 'w') as traceroute_v4_file, open(MES_ID_TRACEROUTE_V6_FILE, 'w') as traceroute_v6_file:
+        # target_site_l = [str(e) for e in target_site_v4_l]
+        for target in target_site_v4_l:
+            try:
+                ping_v4(target, ping_v4_file)
+            except requests.exceptions.HTTPError:
+                print "Due to ping_v4, cannot launch mesurement for {0}".format(target)
+            try:
+                traceroute_v4(target, traceroute_v4_file)
+            except requests.exceptions.HTTPError:
+                print "Due to traceroute_v4, cannot launch mesurement for {0}".format(target)
+
+        for target in target_site_v6_l:
+            try:
+                ping_v6(target, ping_v6_file)
+            except requests.exceptions.HTTPError:
+                print "Due to ping_v6, cannot launch mesurement for {0}".format(target)
+            try:
+                traceroute_v6(target, traceroute_v6_file)
+            except requests.exceptions.HTTPError:
+                print "Due to traceroute_v6, cannot launch mesurement for {0}".format(target)
