@@ -10,7 +10,7 @@ import sys
 from config.config import *
 
 # ==========================================Section: constant variable declaration======================================
-# probe id和此probe的IP地址间的对应关系 22341, 2403, 13842, 2848
+# probe id和此probe的IP地址间的对应关系 22341, 2403, 13842, 2848, 6118
 PROBE_ID_IP_DICT = {
     "132.227.120.130": "22341",
     "37.49.234.132": "6118",
@@ -18,14 +18,21 @@ PROBE_ID_IP_DICT = {
     "153.16.38.64": "2403",
     "81.56.47.149": "2848"
 }
+PROBE_ID_NAME_DICT = {
+
+    "6118"  : "FranceIX",
+    "13842" : "mPlane",
+    "2403" : "LIP6",
+    "22341" : "LISP-Lab",
+    "2848": "home"
+}
 
 # EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的自文件夹名称
 # MEASUREMENT_ID_RECORD_FILE 为存储measurement id的.txt文档
 EXPERIMENT_NAME = '5_probes_to_alexa_top500'
-COMMAND = 'ping'
-# COMMAND = 'traceroute'
-VERSION = 'v4' # 'v6'
-MEASUREMENT_ID_RECORD_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME,'{0}_{1}_{2}_measurement_ids_complete.txt'.format(EXPERIMENT_NAME,COMMAND,VERSION))
+GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
+IP_VERSION = 'v4'  # 'v6'
+MEASUREMENT_ID_RECORD_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME,'{0}_{1}_{2}_measurement_ids_complete.txt'.format(EXPERIMENT_NAME,GENERATE_TYPE,IP_VERSION))
 # ======================================================================================================================
 
 def downlod_trace(measurement_id):
@@ -57,13 +64,13 @@ if __name__ == "__main__":
 
             # 检查是否有 EXPERIMENT_NAME 的文件夹存在在os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)，不存在的话creat
             try:
-                os.stat(os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(COMMAND, VERSION)))
+                os.stat(os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION)))
             except:
-                os.makedirs(os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(COMMAND, VERSION)))
+                os.makedirs(os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION)))
 
-            file = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(COMMAND, VERSION), '{0}.json'.format(id))
+            file = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}.json'.format(id))
             if os.path.exists(file):
-                print id + ".json has already existed in" + os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(COMMAND, VERSION)) + ", no need to download it again!!"
+                print id + ".json has already existed in" + os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION)) + ", no need to download it again!!"
             else:
                 f = open(file, 'w')
                 f.write(downlod_trace(id).text)

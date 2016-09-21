@@ -13,6 +13,23 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # ==========================================Section: constant variable declaration======================================
+# probe id和此probe的IP地址间的对应关系 22341, 2403, 13842, 2848, 6118
+PROBE_ID_IP_DICT = {
+    "132.227.120.130": "22341",
+    "37.49.234.132": "6118",
+    "137.194.165.62": "13842",
+    "153.16.38.64": "2403",
+    "81.56.47.149": "2848"
+}
+PROBE_ID_NAME_DICT = {
+
+    "6118"  : "FranceIX",
+    "13842" : "mPlane",
+    "2403" : "LIP6",
+    "22341" : "LISP-Lab",
+    "2848": "home"
+}
+
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '4_probes_to_alexa_top50'

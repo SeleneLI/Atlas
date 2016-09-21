@@ -7,27 +7,33 @@ from config.config import *
 import json
 import csv
 
-
 # ==========================================Section: constant variable declaration======================================
 
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
-EXPERIMENT_NAME = '4_probes_to_alexa_top50'
-TARGET_TRACES_PATH = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)
-PING_MEASUREMENT_ID_LIST = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_measurement_ids_success.txt'.format(EXPERIMENT_NAME))
+EXPERIMENT_NAME = '5_probes_to_alexa_top500'
+GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
+IP_VERSION = 'v4'  # 'v6'
+TARGET_TRACES_PATH = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME,
+                                  '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION))
+PING_MEASUREMENT_ID_LIST = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME,
+                                        '{0}_{1}_{2}_measurement_ids_complete.txt'.format(EXPERIMENT_NAME,
+                                                                                          GENERATE_TYPE, IP_VERSION))
 
 # 想要生成的 .csv file 中 RTT 的type，若为空则全写进去
-RTT_TYPE = 'avg'    # 'min' or 'avg' or 'max' or 'all'
+RTT_TYPE = 'avg'  # 'min' or 'avg' or 'max' or 'all'
 
-JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
+JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION),
+                             '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
 
 # We define a CONSTANT variable: EXP_INTERVAL, to represent the time interval between two consecutive command
 # (e.g. ping or traceroute)
-EXP_INTERVAL = 600.0
+EXP_INTERVAL = 1800.0
 # We also define a CONSTANT variable: EXP_DUREE, to represent the time span of experimentation
-EXP_SPAN = 6.0*60*60
+EXP_SPAN = 7 * 24 * 60 * 60.0
 # The variable DIMENSION describe the list (containing the RTT) length
-DIMENSION = EXP_SPAN/EXP_INTERVAL
+DIMENSION = EXP_SPAN / EXP_INTERVAL
+
 
 # ======================================================================================================================
 # 此函数负责从 PING_MEASUREMENT_ID_LIST 的txt文档中逐一读出 measurement_id，
@@ -49,12 +55,13 @@ def json_file_finder(file_string):
         # 开文件继续处理
         with open(file_string) as f_handler:
             for line in f_handler:
-                json_file_list.append(os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}.json'.format(line.strip())))
+                json_file_list.append(os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME,
+                                                   '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION),
+                                                   '{0}.json'.format(line.strip())))
 
         return json_file_list
     else:
         return "This file extension cannot be resolved"
-
 
 
 # ======================================================================================================================
@@ -65,9 +72,10 @@ def json_file_finder(file_string):
 def probes_dest_rtts_csv_producer(target_files, stored_file, rtt_type):
     # 检查是否有 JSON2CSV_FILE 存在，不存在的话creat
     try:
-        os.stat(os.path.join(ATLAS_TRACES, 'json2csv'))
+        os.stat(os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION)))
     except:
-        os.makedirs(os.path.join(ATLAS_TRACES, 'json2csv'))
+        os.makedirs(
+            os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION)))
 
     dict_rtt = {'min': 0, 'avg': 1, 'max': 2}
 
@@ -83,11 +91,11 @@ def probes_dest_rtts_csv_producer(target_files, stored_file, rtt_type):
             # 先用第一个 .json file 写 .csv file 的 title
             with open(target_files[0]) as json_handler:
                 json_data = json.load(json_handler)
-                probes =  probes_finder(json_data)
-                experiment_number = len(json_data)/len(probes)
+                probes = probes_finder(json_data)
+                experiment_number = len(json_data) / len(probes)
 
             for i in range(experiment_number):
-                title.append('{0}_min/avg/max'.format(i+1))
+                title.append('{0}_min/avg/max'.format(i + 1))
             a.writerow(title)
 
             # 依次读入需要写入的 .json file，把需要的 rtt 的3个值都写入 .csv file
@@ -95,11 +103,10 @@ def probes_dest_rtts_csv_producer(target_files, stored_file, rtt_type):
                 with open(target_file) as f_handler:
                     json_data = json.load(f_handler)
                     dest = destination_finder(json_data)
-                    probes =  probes_finder(json_data)
+                    probes = probes_finder(json_data)
                     rtts_probes = rtt_finder(probes_finder(json_data), json_data)
                     for key in rtts_probes.keys():
                         print "rtts_probes[key]:", rtts_probes[key]
-
 
                     for probe in probes:
                         rtts = [dest, PROBE_ID_NAME_DICT[str(probe)]]
@@ -110,9 +117,6 @@ def probes_dest_rtts_csv_producer(target_files, stored_file, rtt_type):
                                 rtts.append(rtt[dict_rtt[rtt_type]])
 
                         a.writerow(rtts)
-
-
-
 
 
 # ======================================================================================================================
@@ -131,8 +135,6 @@ def destination_finder(json_data):
         return "There is more than 1 destination in this .json file"
 
 
-
-
 # ======================================================================================================================
 # 此函数负责在 .json 文件中找出参与实验的所有 probes
 # input = .json file
@@ -146,7 +148,6 @@ def probes_finder(json_data):
     return list(set(probes))
 
 
-
 # ======================================================================================================================
 # 此函数负责在 .json 文件中找出每个 probe 相对应的 rtt list
 """
@@ -156,6 +157,8 @@ def probes_finder(json_data):
                 'probe_3': ['min'/'avg'/'max', ..., 'min'/'avg'/'max'],
                 'probe_4': ['min'/'avg'/'max', ..., 'min'/'avg'/'max']}
 """
+
+
 def rtt_finder(probes, json_data):
     """
         @:param probes, type of list, which contains a list of probe ID present in a given JSON file
@@ -178,30 +181,21 @@ def rtt_finder(probes, json_data):
     # 记录每一个实验中, 每个probe的第一命令的发起时间
     ref_time_dict = {}
     for n, probe in enumerate(probes):
-        # rtt_probes_dict[probe] = []
+        print json_data[n]['prb_id']
         rtt_probes_dict[probe] = [[-1, -1, -1] for x in range(int(DIMENSION))]
         ref_time_dict[json_data[n]['prb_id']] = int(json_data[n]['timestamp'])
 
     print ref_time_dict
 
-
-
     for record in json_data:
         current_time = int(record['timestamp'])
         # 如果第一个实验数据的timestamp12：00，实验间隔是10分钟，下一个实验数据是12：10，那么该数据对应的index就是1，如果是下一个
         # 实验数据点的时刻是 12：20，那么该数据的index是2，下标为1点，则永远保持为[-1.0, -1.0, -1.0]
-        index = int(round((current_time - ref_time_dict[record['prb_id']])/EXP_INTERVAL))
+        index = int(round((current_time - ref_time_dict[record['prb_id']]) / EXP_INTERVAL))
         print "index", index
         rtt_probes_dict[record['prb_id']][index] = [record['min'], record['avg'], record['max']]
-        
+
     return rtt_probes_dict
-
-
-
-
-
-
-
 
 
 if __name__ == "__main__":

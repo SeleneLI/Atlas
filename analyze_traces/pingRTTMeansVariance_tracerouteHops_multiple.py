@@ -16,36 +16,36 @@ from config.config import *
 # ==========================================Section: constant variable declaration======================================
 # probe id和此probe的IP地址间的对应关系
 PROBE_ID_IP_DICT = {
-
-    "37.49.233.130": "6118",
+    "132.227.120.130": "22341",
+    "37.49.234.132": "6118",
     "137.194.165.62": "13842",
-    "82.123.188.59": "16958",
-    "82.123.244.192": "16958",
-    "132.227.120.130": "22341"
+    "153.16.38.64": "2403",
+    "81.56.47.149": "2848"
 }
 
 PROBE_ID_NAME_DICT = {
 
     "6118"  : "FranceIX",
     "13842" : "mPlane",
-    "16958" : "rmd",
-    "22341" : "LISP-Lab"
+    "2403" : "LIP6",
+    "22341" : "LISP-Lab",
+    "2848": "home"
 }
-
-# EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的子文件夹名称
-# TARGET_JSON_TRACES_DIR 为要分析的trace的path
-# ANALYZED_TRACE_FILE 为分析完要以.csv形式存储的文件path
-EXPERIMENT_NAME = '4_probes_to_alexa_top50'
-TARGET_JSON_TRACES_DIR = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)
-ANALYZED_TRACE_FILE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME)
-
 # 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
-GENERATE_TYPE = 'PING'  # 'PING' or 'TRACEROUTE'
-IP_VERSION = 'IPv4'  # 'IPv6'
+GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
+IP_VERSION = 'v4'  # 'v6'
 RTT_TYPE = 'avg'    # 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
 MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
 CALCULATE_TYPE = 'median'   # 'mean' or 'median'
+
+# EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的子文件夹名称
+# TARGET_JSON_TRACES_DIR 为要分析的trace的path
+# ANALYZED_TRACE_FILE 为分析完要以.csv形式存储的文件path
+EXPERIMENT_NAME = '5_probes_to_alexa_top500'
+TARGET_JSON_TRACES_DIR = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION))
+ANALYZED_TRACE_FILE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION))
+
 
 # ======================================================================================================================
 # 此函数从只存有 measurement_id 的.txt文档里读出所有的 measurement_id 以 list 形式返回
@@ -211,8 +211,8 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
 
 
     if command == "PING":
-        report_name_ping = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report_{2}_{3}.csv".format(command, name, rtt_type, CALCULATE_TYPE))
-        # 检查是否有 os.path.join(ANALYZED_TRACE_FILE) 存在，部存在的话creat
+        report_name_ping = os.path.join(ANALYZED_TRACE_FILE, EXPERIMENT_NAME, "{0}_{1}_report_{2}_{3}.csv".format(command, name, rtt_type, CALCULATE_TYPE))
+        # 检查是否有 os.path.join(ANALYZED_TRACE_FILE) 存在，部存在的话create
         try:
             os.stat(os.path.join(ANALYZED_TRACE_FILE))
         except:
@@ -269,7 +269,7 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
             f.close()
 
     if command == "TRACEROUTE":
-        report_name_traceroute = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report.csv".format(command, name))
+        report_name_traceroute = os.path.join(ANALYZED_TRACE_FILE, EXPERIMENT_NAME, "{0}_{1}_report.csv".format(command, name))
         # 检查是否有 os.path.join(ANALYZED_TRACE_FILE) 存在，不存在的话creat
         try:
             os.stat(os.path.join(ANALYZED_TRACE_FILE))
