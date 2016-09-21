@@ -32,12 +32,14 @@ PROBE_ID_NAME_DICT = {
 
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
-EXPERIMENT_NAME = '4_probes_to_alexa_top50'
+EXPERIMENT_NAME = '5_probes_to_alexa_top500'
+GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
+IP_VERSION = 'v4'  # 'v6'
 RTT_TYPE = 'avg'
 TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}_AS.csv'.format(RTT_TYPE))
-JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))
-JSON2CSV_FILE_ALL = os.path.join(ATLAS_TRACES, 'json2csv', '{0}_all.csv'.format(EXPERIMENT_NAME))
-TARGET_CSV_DIFF = os.path.join(ATLAS_TRACES, 'json2csv', '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
+JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}.csv'.format(EXPERIMENT_NAME))
+JSON2CSV_FILE_ALL = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_all.csv'.format(EXPERIMENT_NAME))
+TARGET_CSV_DIFF = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
 
 # 为计算某一特定 probe 的 correlation 时才需此参数
 CORR_PROBE = 'LISP-Lab'     # 'FranceIX' or 'LISP-Lab' or 'mPlane' or 'rmd'
@@ -234,6 +236,7 @@ def get_probe_dest_rtt(targeted_file, probe, rtt_type):
     with open(targeted_file) as f_handler:
         next(f_handler)
         for line in f_handler:
+            print line
             if line.split(';')[1] == probe:
                 if line.split(';')[0] not in dict_dest_rtt.keys():
                     dict_dest_rtt[line.split(';')[0]] = []
@@ -294,7 +297,7 @@ def get_dict_rtt_from_json2csv_file(target_file, rtt_type):
             elif line_list[0] in dict_rtt.keys():
                 dict_rtt[line_list[0]][line_list[1]] = [float(element.split('/')[rtt_type_dict[rtt_type]]) for element in line_list[2:]]
 
-    return dict_rtt
+    return dict_rtt.keys()
 
 
 
@@ -745,7 +748,7 @@ if __name__ == "__main__":
     # d = {'a': [2,5.8,-1,4], 'b': [-1,-1,6,13.5]}
     # print probe_robustness_calculator(d)
 
-    # print get_dict_rtt_from_json2csv_file(JSON2CSV_FILE, RTT_TYPE)
+    print get_dict_rtt_from_json2csv_file(JSON2CSV_FILE_ALL, RTT_TYPE)
     # print reverse_dict_keys(get_dict_rtt_from_json2csv_file(JSON2CSV_FILE, RTT_TYPE))
     # print all_probe_robustness_cdf_calculator()
     # pd.DataFrame(all_probe_robustness_cdf_calculator()).plot()
@@ -754,4 +757,4 @@ if __name__ == "__main__":
     # dict_probe_dest_mean = {}
     # dict_probe_dest_var = {}
     # dict_probe_dest_mean, dict_probe_dest_var = difference_calculator(TARGET_CSV_DIFF, REF_PROBE)
-    print get_probe_dest_rtt(JSON2CSV_FILE_ALL, CI_PROBE, RTT_TYPE)
+    # print get_probe_dest_rtt(JSON2CSV_FILE_ALL, CI_PROBE, RTT_TYPE)

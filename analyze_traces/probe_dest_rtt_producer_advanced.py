@@ -36,9 +36,11 @@ TARGET_TRACES_PATH = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NA
 PING_MEASUREMENT_ID_LIST = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_{1}_{2}_measurement_ids_complete.txt'.format(EXPERIMENT_NAME,GENERATE_TYPE,IP_VERSION))
 
 # 想要生成的 .csv file 中 RTT 的type，若为空则全写进去
-RTT_TYPE = 'avg'    # 'min' or 'avg' or 'max' or 'all'
+RTT_TYPE = 'all'    # 'min' or 'avg' or 'max' or 'all'
 
-JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
+JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), 'completed_traces', '{0}_{1}_completed.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
+JSON2CSV_FILE_FILTERED = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
+
 
 # We define a CONSTANT variable: EXP_INTERVAL, to represent the time interval between two consecutive command
 # (e.g. ping or traceroute)
@@ -103,7 +105,7 @@ def probes_dest_rtts_csv_producer(target_files, stored_file, rtt_type):
             with open(target_files[0]) as json_handler:
                 json_data = json.load(json_handler)
                 probes =  probes_finder(json_data)
-                experiment_number = len(json_data)/len(probes)
+                experiment_number = len(json_data)/(len(probes)-2)
 
             for i in range(experiment_number):
                 title.append('{0}_min/avg/max'.format(i+1))
@@ -222,6 +224,23 @@ def rtt_finder(probes, json_data):
     return rtt_probes_dict
 
 
+# 由于一些 probes 在实验期间是没有响应的,所以在最后计算时直接将它们剔除掉
+# input = 5_probes_to_alexa_top500_all.csv
+# output = 5_probes_to_alexa_top500_all_filtered.csv
+def filtered_probes_rtt_producer(original_file, filtered_file):
+    # Open a file to write down
+    with open(filtered_file, 'wb') as csv_handler:
+        a = csv.writer(csv_handler, dialect='excel', delimiter=";")
+
+        # Open a file to read
+        with open(original_file) as f_handler:
+            for line in f_handler:
+                if line.split(';')[0] == 'destination':
+                    a.writerow([i.strip() for i in line.split(';')])
+                # 通过第一行把这个 .csv 文件中存在的与 variance 相关的 probe 名称都取出来，作为 means_of_variance_dict 的 keys
+                elif line.split(';')[1] not in ['home', 'LIP6', 'probe']:
+                    a.writerow([i.strip() for i in line.split(';')])
+
 
 
 
@@ -231,4 +250,7 @@ def rtt_finder(probes, json_data):
 
 if __name__ == "__main__":
     # probes_dest_rtts_csv_producer(json_file_finder('2841097.json'), JSON2CSV_FILE, RTT_TYPE)
-    probes_dest_rtts_csv_producer(json_file_finder(PING_MEASUREMENT_ID_LIST), JSON2CSV_FILE, RTT_TYPE)
+
+    # probes_dest_rtts_csv_producer(json_file_finder(PING_MEASUREMENT_ID_LIST), JSON2CSV_FILE, RTT_TYPE)
+
+    filtered_probes_rtt_producer(JSON2CSV_FILE, JSON2CSV_FILE_FILTERED)
