@@ -4,16 +4,6 @@ __author__ = 'yueli'
 
 
 from config.config import *
-import numpy as np
-import scipy.stats as st
-from scipy.stats import pearsonr
-import matplotlib.pyplot as plt
-import collections
-import pandas as pd
-from pandas.tools.plotting import autocorrelation_plot
-import ping_associated_analyzer as paa
-import scipy as sp
-import scipy.stats
 
 # ======================================================================================================================
 # 此函数可以计算2个相同长度的 list 的 correlation，以矩阵形式返回

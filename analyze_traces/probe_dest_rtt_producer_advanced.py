@@ -5,33 +5,16 @@
 __author__ = 'yueli'
 
 from config.config import *
-import json
-import csv
+import ping_associated_analyzer as paa
 
 
 # ==========================================Section: constant variable declaration======================================
-# probe id和此probe的IP地址间的对应关系 22341, 2403, 13842, 2848, 6118
-PROBE_ID_IP_DICT = {
-    "132.227.120.130": "22341",
-    "37.49.234.132": "6118",
-    "137.194.165.62": "13842",
-    "153.16.38.64": "2403",
-    "81.56.47.149": "2848"
-}
-PROBE_ID_NAME_DICT = {
-
-    "6118"  : "FranceIX",
-    "13842" : "mPlane",
-    "2403" : "LIP6",
-    "22341" : "LISP-Lab",
-    "2848": "home"
-}
 
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '5_probes_to_alexa_top500'
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
-IP_VERSION = 'v4'  # 'v6'
+IP_VERSION = 'v6'  # 'v6'
 TARGET_TRACES_PATH = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION))
 PING_MEASUREMENT_ID_LIST = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_{1}_{2}_measurement_ids_complete.txt'.format(EXPERIMENT_NAME,GENERATE_TYPE,IP_VERSION))
 
@@ -67,12 +50,14 @@ def json_file_finder(file_string):
         return [os.path.join(TARGET_TRACES_PATH, file_string)]
     elif os.path.splitext(file_string)[1] in ['.txt']:
         json_file_list = []
+        m_id_list = []
         # 开文件继续处理
         with open(file_string) as f_handler:
             for line in f_handler:
                 json_file_list.append(os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}.json'.format(line.strip())))
+                m_id_list.append(line.strip())
 
-        return json_file_list
+        return m_id_list, json_file_list
     else:
         return "This file extension cannot be resolved"
 
@@ -83,12 +68,12 @@ def json_file_finder(file_string):
 # 存在 $HOME/Documents/Codes/Atlas/traces/json2csv/EXPERIMENT_NAME.csv 中
 # input = .json file
 # output = .csv file
-def probes_dest_rtts_csv_producer(target_files, stored_file, rtt_type):
+def probes_dest_rtts_csv_producer(m_id_list, target_files, stored_file, rtt_type):
     # 检查是否有 JSON2CSV_FILE 存在，不存在的话creat
     try:
-        os.stat(os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION)))
+        os.stat(os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), 'completed_traces'))
     except:
-        os.makedirs(os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION)))
+        os.makedirs(os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), 'completed_traces'))
 
     dict_rtt = {'min': 0, 'avg': 1, 'max': 2}
 
@@ -99,7 +84,7 @@ def probes_dest_rtts_csv_producer(target_files, stored_file, rtt_type):
         # 打开一个 .csv file
         with open(stored_file, 'wb') as csv_handler:
             a = csv.writer(csv_handler, dialect='excel', delimiter=";")
-            title = ['destination', 'probe']
+            title = ['measurement_id', 'destination', 'probe']
 
             # 先用第一个 .json file 写 .csv file 的 title
             with open(target_files[0]) as json_handler:
@@ -108,22 +93,27 @@ def probes_dest_rtts_csv_producer(target_files, stored_file, rtt_type):
                 experiment_number = len(json_data)/(len(probes)-2)
 
             for i in range(experiment_number):
-                title.append('{0}_min/avg/max'.format(i+1))
+                if RTT_TYPE == 'all':
+                    title.append('{0}_min/avg/max'.format(i+1))
+                else:
+                    title.append('{0}_{1}'.format((i + 1), RTT_TYPE))
             a.writerow(title)
 
+            i = -1
             # 依次读入需要写入的 .json file，把需要的 rtt 的3个值都写入 .csv file
             for target_file in target_files:
+                i += 1
                 with open(target_file) as f_handler:
                     json_data = json.load(f_handler)
                     dest = destination_finder(json_data)
                     probes =  probes_finder(json_data)
                     rtts_probes = rtt_finder(probes_finder(json_data), json_data)
-                    for key in rtts_probes.keys():
-                        print "rtts_probes[{0}]:".format(key), rtts_probes[key]
+                    # for key in rtts_probes.keys():
+                    #     print "rtts_probes[{0}]:".format(key), rtts_probes[key]
 
 
                     for probe in probes:
-                        rtts = [dest, PROBE_ID_NAME_DICT[str(probe)]]
+                        rtts = [m_id_list[i], dest, PROBE_ID_NAME_DICT[str(probe)]]
                         for rtt in rtts_probes[probe]:
                             if rtt_type == 'all':
                                 rtts.append("/".join([str(element) for element in rtt]))
@@ -201,7 +191,7 @@ def rtt_finder(probes, json_data):
     first_probes = []
     fake_time = 0
     for n, probe in enumerate(probes):
-        rtt_probes_dict[probe] = [[0, 0, 0] for x in range(int(DIMENSION))]
+        rtt_probes_dict[probe] = [[-1, -1, -1] for x in range(int(DIMENSION))]
         if json_data[n]['prb_id'] not in first_probes:
             ref_time_dict[json_data[n]['prb_id']] = int(json_data[n]['timestamp'])
             first_probes.append(json_data[n]['prb_id'])
@@ -228,6 +218,12 @@ def rtt_finder(probes, json_data):
 # input = 5_probes_to_alexa_top500_all.csv
 # output = 5_probes_to_alexa_top500_all_filtered.csv
 def filtered_probes_rtt_producer(original_file, filtered_file):
+    # 检查是否有 JSON2CSV_FILE_FILTERED 存在，不存在的话creat
+    try:
+        os.stat(os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION)))
+    except:
+        os.makedirs(os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION)))
+
     # Open a file to write down
     with open(filtered_file, 'wb') as csv_handler:
         a = csv.writer(csv_handler, dialect='excel', delimiter=";")
@@ -235,10 +231,10 @@ def filtered_probes_rtt_producer(original_file, filtered_file):
         # Open a file to read
         with open(original_file) as f_handler:
             for line in f_handler:
-                if line.split(';')[0] == 'destination':
+                if line.split(';')[1] == 'destination':
                     a.writerow([i.strip() for i in line.split(';')])
                 # 通过第一行把这个 .csv 文件中存在的与 variance 相关的 probe 名称都取出来，作为 means_of_variance_dict 的 keys
-                elif line.split(';')[1] not in ['home', 'LIP6', 'probe']:
+                elif line.split(';')[2] not in ['home', 'LIP6', 'probe']:
                     a.writerow([i.strip() for i in line.split(';')])
 
 
@@ -251,6 +247,7 @@ def filtered_probes_rtt_producer(original_file, filtered_file):
 if __name__ == "__main__":
     # probes_dest_rtts_csv_producer(json_file_finder('2841097.json'), JSON2CSV_FILE, RTT_TYPE)
 
-    # probes_dest_rtts_csv_producer(json_file_finder(PING_MEASUREMENT_ID_LIST), JSON2CSV_FILE, RTT_TYPE)
+    # m_id_list, json_file = json_file_finder(PING_MEASUREMENT_ID_LIST)
+    # probes_dest_rtts_csv_producer(m_id_list, json_file, JSON2CSV_FILE, RTT_TYPE)
 
     filtered_probes_rtt_producer(JSON2CSV_FILE, JSON2CSV_FILE_FILTERED)

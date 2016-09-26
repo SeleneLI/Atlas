@@ -15,12 +15,19 @@ from config.config import *
 
 # ==========================================Section: constant variable declaration======================================
 # probe id和此probe的IP地址间的对应关系
-PROBE_ID_IP_DICT = {
+PROBE_ID_IPv4_DICT = {
     "132.227.120.130": "22341",
     "37.49.234.132": "6118",
     "137.194.165.62": "13842",
     "153.16.38.64": "2403",
     "81.56.47.149": "2848"
+}
+PROBE_ID_IPv6_DICT = {
+    "2a03:9180:2:128::84e3:7882": "22341",
+    "2a00:a4c0:2:1::132": "6118",
+    "2001:660:330f:a4:a2f3:c1ff:fec4:5d2e": "13842",
+    "2610:d0:2121::64": "2403",
+    "2a01:e35:1382:f950:220:4aff:fee0:2770": "2848"
 }
 
 PROBE_ID_NAME_DICT = {
@@ -37,7 +44,7 @@ IP_VERSION = 'v4'  # 'v6'
 RTT_TYPE = 'avg'    # 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
 MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
-CALCULATE_TYPE = 'median'   # 'mean' or 'median'
+CALCULATE_TYPE = 'mean'   # 'mean' or 'median'
 
 # EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的子文件夹名称
 # TARGET_JSON_TRACES_DIR 为要分析的trace的path
@@ -53,13 +60,13 @@ ANALYZED_TRACE_FILE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{
 # output = list of measurement id
 def get_measurement_id_list(generate_type, mes_id_type):
     if mes_id_type == 'txt':
-        if generate_type == 'PING':
-            mes_id_ping_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_measurement_ids_complete.txt'.format(EXPERIMENT_NAME))
+        if generate_type == 'ping':
+            mes_id_ping_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_{1}_measurement_ids_complete.txt'.format(EXPERIMENT_NAME,IP_VERSION))
             with open(mes_id_ping_record_file) as f_handler:
                 PING_V4_MES_IDS = [i.strip() for i in f_handler.readlines()] # .strip()用于去掉跟在measurement id后面的换行符
             return PING_V4_MES_IDS
-        elif generate_type == 'TRACEROUTE':
-            mes_id_traceroute_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_traceroute_measurement_ids_complete.txt'.format(EXPERIMENT_NAME))
+        elif generate_type == 'traceroute':
+            mes_id_traceroute_record_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_traceroute_{1}_measurement_ids_complete.txt'.format(EXPERIMENT_NAME,IP_VERSION))
             with open(mes_id_traceroute_record_file) as f_handler:
                 TRACEROUTE_V4_MES_IDS = [i.strip() for i in f_handler.readlines()] # .strip()用于去掉跟在measurement id后面的换行符
             return TRACEROUTE_V4_MES_IDS
@@ -80,7 +87,7 @@ def get_measurement_id_list(generate_type, mes_id_type):
 #                 'probe_3': [rtt_1, rtt_2, rtt_3, ...],
 #                 'probe_4': [rtt_1, rtt_2, rtt_3, ...]
 #                 }
-def ping_traces_resume(mes_id, probe_ids, rtt_type):
+def ping_v4_traces_resume(mes_id, probe_ids, rtt_type):
     # 要处理的traces来源
     file_name = os.path.join(TARGET_JSON_TRACES_DIR, "{0}.json".format(mes_id))
     dst_addr = ""
@@ -103,16 +110,65 @@ def ping_traces_resume(mes_id, probe_ids, rtt_type):
     if len(json_data) != 0:
         # Retrieve the min/avg/max RTT for each ping and then get the average value
         for element in json_data:
-            if PROBE_ID_IP_DICT[element['from']] in rtt_probes_dict.keys():
+            if PROBE_ID_IPv4_DICT[element['from']] in rtt_probes_dict.keys():
                 # 如果‘avg’的值为不为-1，那么我们把'avg'的value存到list里
                 if element[rtt_type] != -1:
-                    rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(element[rtt_type])
+                    rtt_probes_dict[PROBE_ID_IPv4_DICT[element['from']]].append(element[rtt_type])
                 # 如果为-1，那么我们则添加一个0到list里面，一则是避免出现list最后为empty的情况
                 # 因为对empty list调用np.mean(), 会发出警告， 二则是避免-1对平均值的影响
                 else:
-                    rtt_probes_dict[PROBE_ID_IP_DICT[element['from']]].append(0)
+                    rtt_probes_dict[PROBE_ID_IPv4_DICT[element['from']]].append(0)
 
-    print rtt_probes_dict
+
+    for key in rtt_probes_dict.keys():
+        # 按照 CALCULATE_TYPE 计算相应结果
+        if CALCULATE_TYPE == 'mean':
+            rtt_probes_dict[key].append(round(np.mean(rtt_probes_dict[key]), 2))
+        elif CALCULATE_TYPE == 'median':
+            rtt_probes_dict[key].append(round(np.median(rtt_probes_dict[key]), 2))
+        # 因为我们把means存在了 rtt_probes_dict[key] list中的最后一个元素，为了不影响下一行求std的结果，
+        # std的input范围应不包含list的最后一个元素即means值本身，[:-1] 即表示从list的第一个元素到倒数第二个元素
+        rtt_probes_dict[key].append(round(np.std(rtt_probes_dict[key][:-1]), 2))
+        dst_addr = str(json_data[0]["dst_addr"])
+
+
+    print "dest ---->", dst_addr
+    return dst_addr, rtt_probes_dict
+
+
+def ping_v6_traces_resume(mes_id, probe_ids, rtt_type):
+    # 要处理的traces来源
+    file_name = os.path.join(TARGET_JSON_TRACES_DIR, "{0}.json".format(mes_id))
+    dst_addr = ""
+    # src_addr = ""
+    # avg_min = float('inf')
+    # std = float('inf')
+    rtt_probes_dict = {}
+    for probe in probe_ids:
+        rtt_probes_dict[probe] = []
+
+    with open(file_name) as f_handler:
+        # The obtained 'json_data' is of type 'list'. Thus we can use list comprehension to generate the list of min
+        # RTT value
+        json_data = json.load(f_handler)
+        # Since it is possible that a given file is an empty file
+        # (Actually, this 'empty' file contains just a pair of square bracket.).
+        # Thus, it is necessary to verify whether the input file is empty before further processing.
+        # In addition, in case of empty input file, the retured dictionary is empty, which is equivalent to 'False'
+        # in python.
+    if len(json_data) != 0:
+        # Retrieve the min/avg/max RTT for each ping and then get the average value
+        for element in json_data:
+            if PROBE_ID_IPv6_DICT[element['from']] in rtt_probes_dict.keys():
+                # 如果‘avg’的值为不为-1，那么我们把'avg'的value存到list里
+                if element[rtt_type] != -1:
+                    rtt_probes_dict[PROBE_ID_IPv6_DICT[element['from']]].append(element[rtt_type])
+                # 如果为-1，那么我们则添加一个0到list里面，一则是避免出现list最后为empty的情况
+                # 因为对empty list调用np.mean(), 会发出警告， 二则是避免-1对平均值的影响
+                else:
+                    rtt_probes_dict[PROBE_ID_IPv6_DICT[element['from']]].append(0)
+
+
     for key in rtt_probes_dict.keys():
         # 按照 CALCULATE_TYPE 计算相应结果
         if CALCULATE_TYPE == 'mean':
@@ -130,7 +186,7 @@ def ping_traces_resume(mes_id, probe_ids, rtt_type):
 
 
 
-def traceroute_traces_resume(mes_id, probe_ids):
+def traceroute_v4_traces_resume(mes_id, probe_ids):
     """
         Since we can not directly get the desired information from the inital JSON file, we need resume a given JSON to list
         the measurement id to which the JSON file corresponds, the destination of traceroute command, the source
@@ -161,20 +217,81 @@ def traceroute_traces_resume(mes_id, probe_ids):
             dst_adr = json_data[0]['dst_addr']
             # src_addr = json_data[0]["src_addr"]
             for record in json_data:
-                if PROBE_ID_IP_DICT[record['from']] in hops_number_probes_dict.keys():
-                    hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['exp_date'] = datetime.fromtimestamp(int(record["timestamp"])).strftime('%Y-%m-%d %H:%M')
-                    hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['src_addr'] = record["src_addr"]
-                    hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['dst_adr'] = record['dst_addr']
-                    hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['hop_list'] = record['result']
+                if PROBE_ID_IPv4_DICT[record['from']] in hops_number_probes_dict.keys():
+                    hops_number_probes_dict[PROBE_ID_IPv4_DICT[record['from']]]['exp_date'] = datetime.fromtimestamp(int(record["timestamp"])).strftime('%Y-%m-%d %H:%M')
+                    hops_number_probes_dict[PROBE_ID_IPv4_DICT[record['from']]]['src_addr'] = record["src_addr"]
+                    hops_number_probes_dict[PROBE_ID_IPv4_DICT[record['from']]]['dst_adr'] = record['dst_addr']
+                    hops_number_probes_dict[PROBE_ID_IPv4_DICT[record['from']]]['hop_list'] = record['result']
 
                     # exp_date = datetime.fromtimestamp(int(record["timestamp"])).strftime('%Y-%m-%d %H:%M')
                     # src_addr = record["src_addr"]
                     # dst_adr = record['dst_addr']
                     # hop_list = record['result']
                     # print hop_list
-                    hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['hop_list'] = [retrieve_traversed_ip(hop['result']) for hop in hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['hop_list']]
+                    hops_number_probes_dict[PROBE_ID_IPv4_DICT[record['from']]]['hop_list'] = [retrieve_traversed_ip(hop['result']) for hop in hops_number_probes_dict[PROBE_ID_IPv4_DICT[record['from']]]['hop_list']]
                     # print hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['exp_date'], hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['src_addr'], dst_adr, "->".join(hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['hop_list'])
-                    hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['frequent_route_list'].append("->".join(hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['hop_list']))
+                    hops_number_probes_dict[PROBE_ID_IPv4_DICT[record['from']]]['frequent_route_list'].append("->".join(hops_number_probes_dict[PROBE_ID_IPv4_DICT[record['from']]]['hop_list']))
+
+    # we can rely the most_common() method to find out the most occurrences of routes
+    # The output of most_common() is a list of tuple
+    if len(json_data) != 0:
+        for probe in probe_ids:
+            # print Counter(hops_number_probes_dict[probe]['frequent_route_list']).most_common(1)[0][0]
+            hops_number_probes_dict[probe]['hops_number'] = len(Counter(hops_number_probes_dict[probe]['frequent_route_list']).most_common(1)[0][0].split("->"))
+
+    return dst_adr, hops_number_probes_dict
+    # http://customer.xfinity.com/help-and-support/internet/run-traceroute-command/ 该Link 对某一行中偶尔出现的星号
+    # 进行了解释, 简单来说就是，如果 originator 在 规定的timeout时间内没有收到回复，则输出星号，表示没有收到回复。
+
+
+
+
+
+def traceroute_v6_traces_resume(mes_id, probe_ids):
+    """
+        Since we can not directly get the desired information from the inital JSON file, we need resume a given JSON to list
+        the measurement id to which the JSON file corresponds, the destination of traceroute command, the source
+        destination of traceroute, etc.
+
+        In terms of input, this function just take two parameters:
+            @mes_id, type of str, represents the measurement id to which the JSON file corresponds
+            @prob_id, type of str, represents the probe id to which the JSON file corresponds
+
+        Given that the JSON file's name respects to a fixed pattern, for example:
+            RIPE-Atlas-measurement-1017-probe-13842.json
+        we can easily construct the file name if mesurement id and probe id are both given.
+
+    """
+    # 要处理的traces来源
+    file_name = os.path.join(TARGET_JSON_TRACES_DIR, "{0}.json".format(mes_id))
+    frequent_route_list = []
+    dst_adr = ""
+    # src_addr = ""
+    hops_number = 0
+    hops_number_probes_dict = {}
+    for probe in probe_ids:
+        hops_number_probes_dict[probe] = {'frequent_route_list': []}
+
+    with open(file_name) as f_handler:
+        json_data = json.load(f_handler)
+        if len(json_data) != 0:
+            dst_adr = json_data[0]['dst_addr']
+            # src_addr = json_data[0]["src_addr"]
+            for record in json_data:
+                if PROBE_ID_IPv6_DICT[record['from']] in hops_number_probes_dict.keys():
+                    hops_number_probes_dict[PROBE_ID_IPv6_DICT[record['from']]]['exp_date'] = datetime.fromtimestamp(int(record["timestamp"])).strftime('%Y-%m-%d %H:%M')
+                    hops_number_probes_dict[PROBE_ID_IPv6_DICT[record['from']]]['src_addr'] = record["src_addr"]
+                    hops_number_probes_dict[PROBE_ID_IPv6_DICT[record['from']]]['dst_adr'] = record['dst_addr']
+                    hops_number_probes_dict[PROBE_ID_IPv6_DICT[record['from']]]['hop_list'] = record['result']
+
+                    # exp_date = datetime.fromtimestamp(int(record["timestamp"])).strftime('%Y-%m-%d %H:%M')
+                    # src_addr = record["src_addr"]
+                    # dst_adr = record['dst_addr']
+                    # hop_list = record['result']
+                    # print hop_list
+                    hops_number_probes_dict[PROBE_ID_IPv6_DICT[record['from']]]['hop_list'] = [retrieve_traversed_ip(hop['result']) for hop in hops_number_probes_dict[PROBE_ID_IPv6_DICT[record['from']]]['hop_list']]
+                    # print hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['exp_date'], hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['src_addr'], dst_adr, "->".join(hops_number_probes_dict[PROBE_ID_IP_DICT[record['from']]]['hop_list'])
+                    hops_number_probes_dict[PROBE_ID_IPv6_DICT[record['from']]]['frequent_route_list'].append("->".join(hops_number_probes_dict[PROBE_ID_IPv6_DICT[record['from']]]['hop_list']))
 
     # we can rely the most_common() method to find out the most occurrences of routes
     # The output of most_common() is a list of tuple
@@ -210,13 +327,13 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
     probe_name_list = PROBE_ID_NAME_DICT.values()
 
 
-    if command == "PING":
-        report_name_ping = os.path.join(ANALYZED_TRACE_FILE, EXPERIMENT_NAME, "{0}_{1}_report_{2}_{3}.csv".format(command, name, rtt_type, CALCULATE_TYPE))
+    if command == "ping":
+        report_name_ping = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report_{2}_{3}.csv".format(command, name, rtt_type, CALCULATE_TYPE))
         # 检查是否有 os.path.join(ANALYZED_TRACE_FILE) 存在，部存在的话create
         try:
             os.stat(os.path.join(ANALYZED_TRACE_FILE))
         except:
-            os.mkdir(os.path.join(ANALYZED_TRACE_FILE))
+            os.makedirs(os.path.join(ANALYZED_TRACE_FILE))
 
 
         with open(report_name_ping, 'wb') as f_handler:
@@ -229,12 +346,16 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
                 ["variance from {1}".format(rtt_type, probe_name) for probe_name in probe_name_list]
             )
             a.writerow(csv_title)
-            success_ping_mes_id_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_measurement_ids_success.txt'.format(EXPERIMENT_NAME))
+            success_ping_mes_id_file = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_ping_{1}_measurement_ids_success.txt'.format(EXPERIMENT_NAME,IP_VERSION))
             f = open(success_ping_mes_id_file, 'w')
             for mes_id in mes_ids:
                 output_row = [mes_id]
-                dst_addr, rtt_probes_dict = ping_traces_resume(mes_id, probe_ids, rtt_type)
-                output_row.append(dst_addr)
+                if IP_VERSION == 'v4':
+                    dst_addr, rtt_probes_dict = ping_v4_traces_resume(mes_id, probe_ids, rtt_type)
+                    output_row.append(dst_addr)
+                elif IP_VERSION == 'v6':
+                    dst_addr, rtt_probes_dict = ping_v6_traces_resume(mes_id, probe_ids, rtt_type)
+                    output_row.append(dst_addr)
 
                 # e.g. probe_name_list = ["FranceIX", "mPlane", "rmd", "LISP-Lab"]
                 for probe_name in probe_name_list:
@@ -268,13 +389,13 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
                     print mes_id
             f.close()
 
-    if command == "TRACEROUTE":
-        report_name_traceroute = os.path.join(ANALYZED_TRACE_FILE, EXPERIMENT_NAME, "{0}_{1}_report.csv".format(command, name))
+    if command == "traceroute":
+        report_name_traceroute = os.path.join(ANALYZED_TRACE_FILE, "{0}_{1}_report.csv".format(command, name))
         # 检查是否有 os.path.join(ANALYZED_TRACE_FILE) 存在，不存在的话creat
         try:
             os.stat(os.path.join(ANALYZED_TRACE_FILE))
         except:
-            os.mkdir(os.path.join(ANALYZED_TRACE_FILE))
+            os.makedirs(os.path.join(ANALYZED_TRACE_FILE))
 
         with open(report_name_traceroute, 'wb') as f_handler:
             a = csv.writer(f_handler, dialect='excel', delimiter=";")
@@ -286,8 +407,12 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
 
             for mes_id in mes_ids:
                 output_row = [mes_id]
-                dst_addr, hops_number_probes_dict = traceroute_traces_resume(mes_id, probe_ids)
-                output_row.append(dst_addr)
+                if IP_VERSION == 'v4':
+                    dst_addr, hops_number_probes_dict = traceroute_v4_traces_resume(mes_id, probe_ids)
+                    output_row.append(dst_addr)
+                elif IP_VERSION == 'v6':
+                    dst_addr, hops_number_probes_dict = traceroute_v6_traces_resume(mes_id, probe_ids)
+                    output_row.append(dst_addr)
 
                 # e.g. probe_name_list = ["FranceIX", "mPlane", "rmd", "LISP-Lab"]
                 for probe_name in probe_name_list:
@@ -300,12 +425,22 @@ def generate_report(mes_ids, probe_ids, command, name, rtt_type):
 
 
 if __name__ == "__main__":
-    if GENERATE_TYPE == 'PING':
-        generate_report(get_measurement_id_list(GENERATE_TYPE, MES_ID_TYPE), PROBE_ID_IP_DICT.values(), GENERATE_TYPE, IP_VERSION, RTT_TYPE)
-    elif GENERATE_TYPE == 'TRACEROUTE':
-        generate_report(get_measurement_id_list(GENERATE_TYPE, MES_ID_TYPE), PROBE_ID_IP_DICT.values(), GENERATE_TYPE, IP_VERSION, "")
+    if GENERATE_TYPE == 'ping':
+        if IP_VERSION == 'v4':
+            generate_report(get_measurement_id_list(GENERATE_TYPE, MES_ID_TYPE), PROBE_ID_IPv4_DICT.values(), GENERATE_TYPE, IP_VERSION, RTT_TYPE)
+        elif IP_VERSION == 'v6':
+            generate_report(get_measurement_id_list(GENERATE_TYPE, MES_ID_TYPE), PROBE_ID_IPv6_DICT.values(), GENERATE_TYPE, IP_VERSION, RTT_TYPE)
+        else:
+            print "IP version should be 'v4' or 'v6' !!"
+    elif GENERATE_TYPE == 'traceroute':
+        if IP_VERSION == 'v4':
+            generate_report(get_measurement_id_list(GENERATE_TYPE, MES_ID_TYPE), PROBE_ID_IPv4_DICT.values(), GENERATE_TYPE, IP_VERSION, "")
+        elif IP_VERSION == 'v6':
+            generate_report(get_measurement_id_list(GENERATE_TYPE, MES_ID_TYPE), PROBE_ID_IPv6_DICT.values(), GENERATE_TYPE, IP_VERSION, "")
+        else:
+            print "IP version should be 'v4' or 'v6' !!"
     else:
-        print "Generate type should be 'PING' or 'TRACEROUTE' !!"
+        print "Generate type should be 'ping' or 'traceroute' !!"
 
 
 
