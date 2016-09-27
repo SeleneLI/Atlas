@@ -15,7 +15,7 @@ import numpy as np
 # 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
 IP_VERSION = 'v4'  # 'v6'
-RTT_TYPE = 'avg'    # 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
+RTT_TYPE = 'avg'    # 'avg' or 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
 MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
 CALCULATE_TYPE = 'mean'   # 'mean' or 'median'
@@ -79,16 +79,16 @@ output =
 def clean_rtt_series(dest_probes_rtt_dict):
     index = []
     for probe in dest_probes_rtt_dict.keys():
-        index.extend([i for i, x in enumerate(dest_probes_rtt_dict[probe]) if x == -1])
+        index.extend([i for i, x in enumerate(dest_probes_rtt_dict[probe]) if x == '-1'])
 
-    index.sort()    # Let the index to remove is sorted from small to big
-    reversed_index = [i for i in reversed(index)]   # Remove the element with a high index to ensure the order don' change
+    # index.sort()    # Let the index to remove is sorted from small to big
+    # reversed_index = [i for i in reversed(index)]   # Remove the element with a high index to ensure the order don' change
 
+    clean_dest_probes_rtt_dict = {}
     for probe in dest_probes_rtt_dict.keys():
-        for i in reversed_index:
-            del dest_probes_rtt_dict[probe][i]
+        clean_dest_probes_rtt_dict[probe] = [rtt for i, rtt in enumerate(dest_probes_rtt_dict[probe]) if i not in index]
 
-    return dest_probes_rtt_dict
+    return clean_dest_probes_rtt_dict
 
 
 # def get_clean_traces():
@@ -180,7 +180,7 @@ def get_clean_traces():
 
     print "len(dest_probes_rtt_dict.keys())", len(dest_probes_rtt_dict.keys())
     print "len(m_id_list):", len(m_id_list)
-    print dest_probes_rtt_dict
+    # print dest_probes_rtt_dict
     return dest_probes_rtt_dict
 
 
@@ -200,7 +200,7 @@ def generate_report(dest_probes_rtt_dict):
         csv_writter = csv.writer(f_handler, delimiter=';')
         csv_title = ['mesurement id', 'Destination']
         csv_title.extend(
-            ["avg({0} RTT) from {1}".format(RTT_TYPE, probe_name) for probe_name in probes_list])
+            ["{0}({1} RTT) from {2}".format(CALCULATE_TYPE,RTT_TYPE, probe_name) for probe_name in probes_list])
         csv_title.extend(
             ["variance from {1}".format(RTT_TYPE, probe_name) for probe_name in probes_list])
         csv_writter.writerow(csv_title)
@@ -228,10 +228,9 @@ def generate_report(dest_probes_rtt_dict):
 
 if __name__ == "__main__":
     # print get_probes()
-    # dict_target = {'MR_1': [2, 5, 5, -1,3],
-    #                'MR_2': [1, -1, 1, 5,2]}
+    dict_target = {'MR_1': [2, 5, 5, -1, 3],
+                   'MR_2': [1, -1, 1, 5, 2]}
     # print all_probes_have_rtt(dict_target)
-    #
     # print clean_rtt_series(dict_target)
 
 
