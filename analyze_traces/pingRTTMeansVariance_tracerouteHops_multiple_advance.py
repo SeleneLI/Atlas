@@ -26,7 +26,7 @@ EXPERIMENT_NAME = '5_probes_to_alexa_top500'
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION),'{0}_{1}.csv'.format(EXPERIMENT_NAME,RTT_TYPE))
 # The folder path, where we will store the filtered .csv tables
 FILTERED_TRACE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION))
-
+DEST_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, 'top_510_websites_fr.csv')
 
 # ==========================================Section: functions declaration======================================
 # Get the probes_list from JSON2CSV_FILE
@@ -40,6 +40,35 @@ def get_probes():
             probes_list.append(line.split(";")[2].strip())
 
     return list(set(probes_list))
+
+
+# Get the Country & Continent from file to a dictionary
+# "/Users/yueli/Documents/Codes/Atlas/conduct_measurements/5_probes_to_alexa_top500/top_510_websites_fr.csv"
+# input = .csv file
+# output =
+"""
+    {'dest': ['country', 'continent'],
+     'dest': ['country', 'continent'],
+     ...
+     'dest': ['country', 'continent']}
+"""
+def get_country_continent():
+    dest_country_continent = {}
+    try:
+        os.stat(DEST_FILE)
+    except:
+        print "The .csv file where to get Country & Continent doesn' exist !!", DEST_FILE
+
+    with open(DEST_FILE) as f_handler:
+        next(f_handler)
+        for line in f_handler:
+            dest_country_continent[line.split(";")[1].strip()] = [line.split(";")[2].strip(), line.split(";")[3].strip()]
+            if len(line.split(";")) > 4:
+                dest_country_continent[line.split(";")[4].strip()] = [line.split(";")[5].strip(), line.split(";")[6].strip()]
+
+    print "len(dest_country_continent.keys())", len(dest_country_continent.keys())
+    return dest_country_continent
+
 
 
 
@@ -91,47 +120,6 @@ def clean_rtt_series(dest_probes_rtt_dict):
     return clean_dest_probes_rtt_dict
 
 
-# def get_clean_traces():
-#     temp_probes_list = []
-#     dest_probes_rtt_dict = {}
-#     probes_rtt_dict = {}
-#     m_id = ''
-#     m_id_list = []
-#     dest = ''
-#     with open(JSON2CSV_FILE) as json2csv_file:
-#         next(json2csv_file)
-#         j=0
-#         for line in json2csv_file:
-#             current_m_id = line.split(";")[0].strip()
-#             current_dest = line.split(";")[1].strip()
-#             probe = line.split(";")[2].strip()
-#
-#
-#
-#             temp_probes_list.append(probe)
-#
-#             if (len(temp_probes_list) <= 3): # and (line.split(";")[1].strip() in probes_list):
-#                 probes_rtt_dict[line.split(";")[2].strip()] = [i.strip() for i in line.split(";")[3:]]
-#
-#             elif len(temp_probes_list) > 3:
-#                 if all_probes_have_rtt(probes_rtt_dict):
-#                     dest_probes_rtt_dict[dest] = clean_rtt_series(probes_rtt_dict)
-#                     print dest_probes_rtt_dict[dest]
-#                     m_id_list.append(m_id)
-#
-#                 else:
-#                     print "Bad dest:", dest
-#                 temp_probes_list = []
-#                 temp_probes_list.append(probe)
-#                 probes_rtt_dict = {}
-#                 probes_rtt_dict[line.split(";")[2].strip()] = [i for i in line.split(";")[3:]]
-#
-#             m_id = current_m_id
-#             dest = current_dest
-#
-#     print "len(dest_probes_rtt_dict.keys())", len(dest_probes_rtt_dict.keys())
-#     print "len(m_id_list):", len(m_id_list)
-#     print dest_probes_rtt_dict.keys()
 
 
 def get_clean_traces():
@@ -195,21 +183,22 @@ def generate_report(dest_probes_rtt_dict):
     clean_file = os.path.join(FILTERED_TRACE_PATH, '{0}_{1}_report_{2}_{3}.csv'.format(GENERATE_TYPE,IP_VERSION,RTT_TYPE,CALCULATE_TYPE))
 
     probes_list = get_probes()
+    dest_country_continent = get_country_continent()
 
     with open(clean_file, 'wb') as f_handler:
         csv_writter = csv.writer(f_handler, delimiter=';')
-        csv_title = ['mesurement id', 'Destination']
+        csv_title = ['mesurement id', 'Destination', 'Country', 'Continent']
         csv_title.extend(
             ["{0}({1} RTT) from {2}".format(CALCULATE_TYPE,RTT_TYPE, probe_name) for probe_name in probes_list])
         csv_title.extend(
             ["variance from {1}".format(RTT_TYPE, probe_name) for probe_name in probes_list])
         csv_writter.writerow(csv_title)
         for key, value in dest_probes_rtt_dict.iteritems():
-            # print "value ---->", value
             csv_row = []
             current_m_id, current_dest = key[0], key[1]
             csv_row.append(current_m_id)
             csv_row.append(current_dest)
+            csv_row.extend(dest_country_continent[key[1]])
             rtts = []
             for probe in probes_list:
                 rtt_tmp = [float(element) for element in value[probe]]
@@ -235,21 +224,6 @@ if __name__ == "__main__":
 
 
     generate_report(get_clean_traces())
-    # print all_probes_have_rtt({})
-
-
-    # probes_rtt_dict = {}
-    # with open(JSON2CSV_FILE) as json2csv_file:
-    #     next(json2csv_file)
-    #     for line in json2csv_file:
-    #         if line.split(";")[0].strip() == '199.182.216.166':
-    #             probes_rtt_dict[line.split(";")[1].strip()] = list(set([i.strip() for i in line.split(";")[2:]]))
-    #
-    #
-    # if all_probes_have_rtt(probes_rtt_dict):
-    #     print "Yes"
-    # generate_report()
-
 
 
 
