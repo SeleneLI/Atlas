@@ -4,7 +4,7 @@
 __author__ = 'yueli'
 
 from config.config import *
-import ping_associated_analyzer as paa
+import math_tool as mt
 
 # ==========================================Section: constant variable declaration======================================
 
@@ -15,8 +15,9 @@ EXPERIMENT_NAME = '5_probes_to_alexa_top500'
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
 IP_VERSION = 'v4'  # 'v6'
 RTT_TYPE = 'avg'
-TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}_AS.csv'.format(RTT_TYPE))
-JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}.csv'.format(EXPERIMENT_NAME))
+CALCULATE_TYPE = 'mean'   # 'mean' or 'median'
+TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}_report_{2}_{3}.csv'.format(GENERATE_TYPE,IP_VERSION,CALCULATE_TYPE,RTT_TYPE))
+JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}.csv'.format(EXPERIMENT_NAME,RTT_TYPE))
 JSON2CSV_FILE_ALL = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_all.csv'.format(EXPERIMENT_NAME))
 TARGET_CSV_DIFF = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
 
@@ -131,12 +132,17 @@ def reverse_dict_keys(target_dict):
     inner_key_list = []
 
     for outer_key in target_dict.keys():
-        inner_key_list = target_dict[outer_key].keys()
+        inner_key_list.extend(target_dict[outer_key].keys())
+
+    inner_key_list = list(set(inner_key_list))
 
     for new_outer_key in inner_key_list:
         reversed_dict[new_outer_key] = {}
         for new_inner_key in outer_key_list:
-            reversed_dict[new_outer_key][new_inner_key] = target_dict[new_inner_key][new_outer_key]
+            if new_outer_key in target_dict[new_inner_key].keys():
+                reversed_dict[new_outer_key][new_inner_key] = target_dict[new_inner_key][new_outer_key]
+            else:
+                reversed_dict[new_outer_key][new_inner_key] = 0
 
     return reversed_dict
 
@@ -260,6 +266,7 @@ def get_all_dest(targeted_file):
                   }
 """
 def get_dict_rtt_from_json2csv_file(target_file, rtt_type):
+    print "target_file", target_file
     # 先根据输入的 rtt_type 找出在dict里存储时的相应 index
     rtt_type_dict = {'min': 0,
                      'avg': 1,
@@ -270,13 +277,19 @@ def get_dict_rtt_from_json2csv_file(target_file, rtt_type):
         next(f_handler)
         for line in f_handler:
             line_list = line.split(";")
-            if line_list[0] not in dict_rtt.keys():
-                dict_rtt[line_list[0]] = {}
-                dict_rtt[line_list[0]][line_list[1]] = [float(element.split('/')[rtt_type_dict[rtt_type]]) for element in line_list[2:]]
-            elif line_list[0] in dict_rtt.keys():
-                dict_rtt[line_list[0]][line_list[1]] = [float(element.split('/')[rtt_type_dict[rtt_type]]) for element in line_list[2:]]
+            if line_list[1] not in dict_rtt.keys():
+                dict_rtt[line_list[1]] = {}
+                dict_rtt[line_list[1]][line_list[2]] = [float(element.split('/')[rtt_type_dict[rtt_type]]) for element in line_list[3:]]
+            elif line_list[1] in dict_rtt.keys():
+                dict_rtt[line_list[1]][line_list[2]] = [float(element.split('/')[rtt_type_dict[rtt_type]]) for element in line_list[3:]]
 
-    return dict_rtt.keys()
+    # for key in dict_rtt.keys():
+    #     print key
+    #     print dict_rtt[key].keys()
+    #     print dict_rtt[key]
+
+    # return dict_rtt.keys()
+    return dict_rtt
 
 
 
@@ -484,6 +497,7 @@ def cdf_from_pdf_list(pdf_list):
 # output = cdf_dict['index_1':cdf_1, 'index_2':cdf_2, ...]
 # 因为输入是 dict，所以是无序的，不一定是按由小到大顺序排列，所以需要特殊处理
 def cdf_from_pdf_dict(pdf_dict):
+    print "pdf_dict ==>", pdf_dict
     sorted_pdf_tuple = sorted(pdf_dict.items(), key=lambda e:e[0], reverse=False)      # 升序时为 False 可以省略不写
     print sorted_pdf_tuple
 
@@ -538,7 +552,7 @@ def probe_robustness_calculator(probe_rtt_dict):
 
     robust_list = []
     for dest in probe_rtt_dict.keys():
-        print "dest ==", dest
+        # print "dest ==", dest
         robust_list.append(valid_rtt_percentage_calculator(probe_rtt_dict[dest]))
 
     # print "robust_list:", robust_list
@@ -556,10 +570,8 @@ def all_probe_robustness_calculator():
     # print "all_probe_robustness_calculator() is called"
 
     probe_robust_list = {}
-    probe_dest_rtt_dict = reverse_dict_keys(get_dict_rtt_from_json2csv_file(JSON2CSV_FILE, RTT_TYPE))
-
+    probe_dest_rtt_dict = reverse_dict_keys(get_dict_rtt_from_json2csv_file(JSON2CSV_FILE_ALL, RTT_TYPE))
     for probe in probe_dest_rtt_dict.keys():
-        print "probe ====", probe
         probe_robust_list[probe] = probe_robustness_calculator(probe_dest_rtt_dict[probe])
 
     # print "probe_robust_list:", probe_robust_list
@@ -574,7 +586,7 @@ def all_probe_robustness_pdf_calculator():
     d = all_probe_robustness_calculator()
     pdf_dict = {}
     for probe in d.keys():
-        pdf_dict[probe] = math_tool.sequence_pdf_producer(d[probe], INTERVAL)
+        pdf_dict[probe] = mt.sequence_pdf_producer_2_sides(d[probe], INTERVAL)
 
     return pdf_dict
 
@@ -585,7 +597,6 @@ def all_probe_robustness_pdf_calculator():
 # 此函数为所有参与实验的 probe 一起进行 robustness 的 CDF 计算
 def all_probe_robustness_cdf_calculator():
     d = all_probe_robustness_calculator()
-    print d
     cdf_dict = {}
     for probe in d.keys():
         pdf_dict = all_probe_robustness_pdf_calculator()
@@ -724,10 +735,10 @@ if __name__ == "__main__":
     # cdf_for_dict(TARGET_CSV_TRACES)
     # print relative_performance_list_calculator([2.0,9.0,5.0,6.0], [7.0,5.0,3.0,2.0])
 
-    # d = {'a': [2,5.8,-1,4], 'b': [-1,-1,6,13.5]}
+    d = {'a': [2,5.8,-1,4], 'b': [-1,-1,6,13.5]}
     # print probe_robustness_calculator(d)
 
-    print get_dict_rtt_from_json2csv_file(JSON2CSV_FILE_ALL, RTT_TYPE)
+    # print get_dict_rtt_from_json2csv_file(JSON2CSV_FILE_ALL, RTT_TYPE)
     # print reverse_dict_keys(get_dict_rtt_from_json2csv_file(JSON2CSV_FILE, RTT_TYPE))
     # print all_probe_robustness_cdf_calculator()
     # pd.DataFrame(all_probe_robustness_cdf_calculator()).plot()

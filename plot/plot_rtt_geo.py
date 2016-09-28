@@ -637,7 +637,7 @@ if __name__ == "__main__":
     # list_a, list_base = get_lists_from_dict(get_rtt_by_geo(get_target_csv_name(GENERATE_TYPE, RTT_TYPE, CALCULATE_TYPE)), RELATIVE_KEY_A, RELATIVE_KEY_BASE)
     # plot_diff_bar_lists(list_a, list_base, get_target_csv_name(GENERATE_TYPE, RTT_TYPE, CALCULATE_TYPE))
 
-    # plot_proportion_bar_geo(get_target_csv_name(GENERATE_TYPE, RTT_TYPE, CALCULATE_TYPE))
+    plot_proportion_bar_geo(get_target_csv_name(GENERATE_TYPE, RTT_TYPE, CALCULATE_TYPE))
     # plot_proportion_stacked_bar_geo(get_target_csv_name(GENERATE_TYPE, RTT_TYPE, CALCULATE_TYPE))
 
     plot_diff_bar_dict(get_rtt_by_geo(get_target_csv_name(GENERATE_TYPE, RTT_TYPE, CALCULATE_TYPE)), RELATIVE_KEY_A, RELATIVE_KEY_REF, get_target_csv_name(GENERATE_TYPE, RTT_TYPE, CALCULATE_TYPE))

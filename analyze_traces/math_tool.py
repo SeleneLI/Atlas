@@ -301,6 +301,43 @@ def dests_probe_confidence_interval():
 
 
 # ======================================================================================================================
+# 此函数针为某一给定的 list & interval 求出其相应的 "pdf", 但这个 list 会有正数也会有负数
+# 正数部分一律向下取整，负数部分一律向上取整
+# input = [data_1, data_2, data_3, ...], interval
+# output = 2 lists:
+#          pdf_list =[pdf_1, pdf_2, ..., pdf_n]
+#          index_list = [index_1, index_2, ..., index_n]
+# output 的 index_1(index_n) 为 input 中每个元素向上取整后的最小(大)数，并且 index_list 已按增序排列
+def sequence_pdf_producer_2_sides(target_list, interval):
+    print "sequence_pdf_producer is called"
+    int_list = []
+
+    for i in target_list:
+        if i >= 0:
+            int_list.append(math.floor(i / interval))
+        else:
+            int_list.append(math.ceil(i / interval))
+    target_counter = Counter(int_list)
+
+    # target_counter = Counter([math.ceil(i) for i in target_list])
+    target_dict = dict(target_counter)
+    if len(target_dict.keys()) < (max(target_dict.keys()) - min(target_dict.keys()) + 1):
+        for index in range(int(min(target_dict.keys())), int(max(target_dict.keys())) + 1):
+            if index not in target_dict.keys():
+                target_dict[float(index)] = 0.0
+
+    # 把 target_ceil_dict.values() 中的个数改成 pdf
+    sum_number = sum(target_dict.values())
+    for index in target_dict.keys():
+        target_dict[index] = target_dict[index]/sum_number
+
+    # 由于计算时有按 zoom 缩放过原数据，所以现在需要把其还原，否则 target_dict 中的 key 始终是 zoom 过的
+    target_dict_final = {}
+    for index in target_dict.keys():
+        target_dict_final[index * interval] = target_dict[index]
+
+
+# ======================================================================================================================
 if __name__ == "__main__":
 
     # x = np.arange(0, 2*pi, 0.1)

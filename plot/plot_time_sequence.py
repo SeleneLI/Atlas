@@ -10,6 +10,7 @@ import numpy as np
 import re
 import matplotlib as mpl
 import pandas as pd
+import analyze_traces.pingRTTMeansVariance_tracerouteHops_multiple_advance as ptma
 
 mpl.rcParams['text.usetex'] = True
 mpl.rcParams.update({'figure.autolayout': True})
@@ -18,12 +19,15 @@ mpl.rcParams.update({'figure.autolayout': True})
 # ==========================================Section: constant variable declaration======================================
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
-EXPERIMENT_NAME = '4_probes_to_alexa_top50'  # Needs to change
-TARGET_CSV_TRACES = os.path.join(ATLAS_TRACES, 'json2csv', '{0}.csv'.format(EXPERIMENT_NAME))
-RTT_TYPE_TARGET = 'avg'
-TARGET_CSV_TRACES_CDF = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'PING_IPv4_report_{0}.csv'.format(RTT_TYPE_TARGET))
-FILE_PATH_CDF_FIGURE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'CDF_figures')
-FILE_PATH_CSV_COMP = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'comp_RTTs_between_probes_{0}.eps'.format(RTT_TYPE_TARGET))
+EXPERIMENT_NAME = '5_probes_to_alexa_top500'  # Needs to change
+GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
+IP_VERSION = 'v4'  # 'v6'
+TARGET_CSV_TRACES = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_all.csv'.format(EXPERIMENT_NAME))
+RTT_TYPE_TARGET = 'max'
+CALCULATE_TYPE = 'mean'   # 'mean' or 'median'
+TARGET_CSV_TRACES_CDF = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}_report_{2}_{3}.csv'.format(GENERATE_TYPE,IP_VERSION,CALCULATE_TYPE,RTT_TYPE_TARGET))
+FILE_PATH_CDF_FIGURE = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), 'CDF_figures')
+FILE_PATH_CSV_COMP = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), 'comp_RTTs_between_probes_{0}.eps'.format(RTT_TYPE_TARGET))
 
 # The title shown on the figure
 # The full path and figure name
@@ -234,7 +238,7 @@ def comp_means_rtt_dests(target_file, saving_path_name):
 # output ＝ 存储在相应路径下的一张图
 def plot_cdf_from_dict(dict_to_plot):
     data = pd.DataFrame(dict_to_plot)
-    print data
+    # print data
     data.plot(linewidth = 5)
     plt.xlabel(r"\textrm{robustness (\%)}", font)
     plt.ylabel(r"\textrm{cdf}", font)
@@ -245,6 +249,8 @@ def plot_cdf_from_dict(dict_to_plot):
     plt.show()
 
     return pd.DataFrame(dict_to_plot)
+
+
 
 
 
@@ -265,5 +271,5 @@ if __name__ == "__main__":
     #comp_means_rtt_dests(TARGET_CSV_TRACES_CDF, FILE_PATH_CSV_COMP)
 
     # plot_cdf_from_file(TARGET_CSV_TRACES_CDF, FILE_PATH_CDF_FIGURE)
-    plot_cdf_from_dict(paa.all_probe_robustness_cdf_calculator())
 
+    plot_cdf_from_dict(paa.all_probe_robustness_cdf_calculator())

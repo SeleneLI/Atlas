@@ -18,7 +18,7 @@ IP_VERSION = 'v4'  # 'v6'
 RTT_TYPE = 'avg'    # 'avg' or 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
 MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
-CALCULATE_TYPE = 'mean'   # 'mean' or 'median'
+CALCULATE_TYPE = 'median'   # 'mean' or 'median'
 
 # EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的子文件夹名称
 EXPERIMENT_NAME = '5_probes_to_alexa_top500'
@@ -121,7 +121,14 @@ def clean_rtt_series(dest_probes_rtt_dict):
 
 
 
-
+# input = JSON2CSV_FILE
+# output = {
+#           ('mes_id','dest'): [RTT, RTT, ..., RTT],
+#           ('mes_id','dest'): [RTT, RTT, ..., RTT],
+#           ('mes_id','dest'): [RTT, RTT, ..., RTT],
+#           ...
+#           ('mes_id','dest'): [RTT, RTT, ..., RTT]
+#           }
 def get_clean_traces():
     temp_probes_list = []
     dest_probes_rtt_dict = {}
@@ -187,25 +194,31 @@ def generate_report(dest_probes_rtt_dict):
 
     with open(clean_file, 'wb') as f_handler:
         csv_writter = csv.writer(f_handler, delimiter=';')
-        csv_title = ['mesurement id', 'Destination', 'Country', 'Continent']
+        csv_title = ['mesurement id', 'Destination']
         csv_title.extend(
             ["{0}({1} RTT) from {2}".format(CALCULATE_TYPE,RTT_TYPE, probe_name) for probe_name in probes_list])
         csv_title.extend(
             ["variance from {1}".format(RTT_TYPE, probe_name) for probe_name in probes_list])
+        csv_title.extend(['Country', 'Continent'])
         csv_writter.writerow(csv_title)
         for key, value in dest_probes_rtt_dict.iteritems():
             csv_row = []
             current_m_id, current_dest = key[0], key[1]
             csv_row.append(current_m_id)
             csv_row.append(current_dest)
-            csv_row.extend(dest_country_continent[key[1]])
             rtts = []
             for probe in probes_list:
                 rtt_tmp = [float(element) for element in value[probe]]
                 rtts.append(rtt_tmp)
 
-            csv_row.extend([np.mean(element) for element in rtts])
+            if CALCULATE_TYPE == 'mean':
+                csv_row.extend([np.mean(element) for element in rtts])
+            elif CALCULATE_TYPE == 'median':
+                csv_row.extend([np.median(element) for element in rtts])
+            else:
+                print "CALCULATE_TYPE should be 'mean' or 'median' !! Retry "
             csv_row.extend([np.var(element) for element in rtts])
+            csv_row.extend(dest_country_continent[key[1]])
 
             csv_writter.writerow(csv_row)
 
@@ -222,7 +235,7 @@ if __name__ == "__main__":
     # print all_probes_have_rtt(dict_target)
     # print clean_rtt_series(dict_target)
 
-
+    # print get_clean_traces().keys()[0]
     generate_report(get_clean_traces())
 
 
