@@ -233,10 +233,12 @@ if __name__ == "__main__":
     dict_target = {'MR_1': [2, 5, 5, -1, 3],
                    'MR_2': [1, -1, 1, 5, 2]}
     # print all_probes_have_rtt(dict_target)
-    # print clean_rtt_series(dict_target)
+
+    print clean_rtt_series(dict_target)
 
     # print get_clean_traces().keys()[0]
-    generate_report(get_clean_traces())
+
+    # generate_report(get_clean_traces())
 
 
 

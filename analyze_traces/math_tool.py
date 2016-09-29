@@ -17,23 +17,25 @@ import scipy as sp
 import scipy.stats
 
 # ==========================================Section: constant variable declaration======================================
-EXPERIMENT_NAME = '4_probes_to_alexa_top50'
+EXPERIMENT_NAME = '5_probes_to_alexa_top500'
 RTT_TYPE = 'avg'
+GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
+IP_VERSION = 'v4'  # 'v6'
 
 # We define a CONSTANT variable: EXP_INTERVAL, to represent the time interval between two consecutive command
 # (e.g. ping or traceroute)
-EXP_INTERVAL = 600.0
+EXP_INTERVAL = 1800.0
 # We also define a CONSTANT variable: EXP_DUREE, to represent the time span of experimentation
-EXP_SPAN = 6.0*60*60
+EXP_SPAN = 7*24.0*60*60
 # The variable DIMENSION describe the list (containing the RTT) length
 DIMENSION = EXP_SPAN/EXP_INTERVAL
 
-FIGURE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'time_sequence')
+FIGURE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), 'periodicity_verify')
 # 函数 csv_file_pick_rtt_series 执行后的output所需调用的函数，目前可为： 'periodicity' or 'rtt_statistics' or 'autocorr_plot'
 ACTION = 'periodicity'    # 当 ACTION = 'autocorr_plot' 时可以通过手动关闭plot出来的autocorr图来进入下一张
 CONFIDENCE = 0.95
 
-JSON2CSV_FILE_ALL = os.path.join(ATLAS_TRACES, 'json2csv', '{0}_all.csv'.format(EXPERIMENT_NAME))
+JSON2CSV_FILE_ALL = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}.csv'.format(EXPERIMENT_NAME,RTT_TYPE))
 
 # 为计算某一特定 probe 的 confidence interval 时才需此参数
 CI_PROBE = 'LISP-Lab'     # 'FranceIX' or 'LISP-Lab' or 'mPlane' or 'rmd'
@@ -106,7 +108,7 @@ def periodicity_verified_ftt(sig):
             freqs_xticks_inverse.append("endless")
         else:
             freqs_xticks_inverse.append(round(1/f,2))
-    print "fft_sig:", fft_sig
+    # print "fft_sig:", fft_sig
 
     return fft_size, freq, fft_sig, Freq_max
 
@@ -116,13 +118,13 @@ def periodicity_verified_ftt(sig):
 # 此函数可以通过 Auto-correlation 来计算1个 list 的 periodicity
 def periodicity_verified_autocorr(sig,lags): #计算lags阶以内的自相关系数，返回lags个值，分别计算序列均值，标准差
         n = len(sig)
-        print "n:", n
+        # print "n:", n
         x = np.array([float(sig) for sig in sig])
-        print "x:", x
+        # print "x:", x
         result = [np.correlate(x[i:]-x[i:].mean(),x[:n-i]-x[:n-i].mean())[0]\
             /(x[i:].std()*x[:n-i].std()*(n-i)) \
             for i in range(1,lags+1)]
-        print "result:", result
+        # print "result:", result
 
         return result
 
@@ -136,18 +138,18 @@ def plot_fft_autocorr(sig, dest, probe):
     #画出时间域的幅度图
     plt.subplot(311)
     plt.plot(np.arange(1, fft_size+1), sig, 'black')
-    plt.xlabel("Experiment number")
-    plt.ylabel("RTT (ms)")
+    plt.xlabel("Experiment number", fontsize=30, fontname="Times New Roman")
+    plt.ylabel("RTT (ms)", fontsize=30, fontname="Times New Roman")
     plt.xlim(0,len(sig))
     # plt.legend()
-    plt.title("RTT series")
+    plt.title("RTT series", fontsize=30, fontname="Times New Roman")
 
 
     #画出频域图,你会发现你的横坐标无从下手？虽然你懂了后面的东西后可以返回来解决，但是现在就非常迷惑。现在只能原封不懂的画出频率图
     plt.subplot(312)
     plt.plot(freq, 2*np.abs(fft_sig),'blue')#如果用db作单位则20*np.log10(2*np.abs(fft_sig))
-    plt.xlabel('Frequency(Hz)')
-    plt.ylabel('Frenquency\nspectrum')
+    plt.xlabel('Frequency(Hz)', fontsize=30, fontname="Times New Roman")
+    plt.ylabel('Frenquency\nspectrum', fontsize=30, fontname="Times New Roman")
     plt.xlim(0, Freq_max)
     # plt.title('Frenquency spectrum for RTT series')
 
@@ -156,17 +158,17 @@ def plot_fft_autocorr(sig, dest, probe):
     plt.plot(np.arange(1, fft_size), correlation_result,'red')
     plt.plot(np.arange(1, fft_size), [i*0 for i in np.arange(1, fft_size)], '--', color='black')
     plt.xlim(1, len(np.arange(1, fft_size))/2)
-    plt.xlabel("lags from 1 to n/2-1")
-    plt.ylabel("Auto-\ncorrelation")
+    plt.xlabel("lags from 1 to n/2-1", fontsize=30, fontname="Times New Roman")
+    plt.ylabel("Auto-\ncorrelation", fontsize=30, fontname="Times New Roman")
     # plt.title('Auto-correlation for RTT series')
 
 
     # 检查是否有 JSON2CSV_FILE 存在，不存在的话creat
     try:
-        os.stat(os.path.join(FIGURE_PATH, 'periodicity_verified', RTT_TYPE, probe))
+        os.stat(os.path.join(FIGURE_PATH, RTT_TYPE, probe))
     except:
-        os.makedirs(os.path.join(FIGURE_PATH, 'periodicity_verified', RTT_TYPE, probe))
-    plt.savefig(os.path.join(FIGURE_PATH, 'periodicity_verified', RTT_TYPE, probe, '{0}.eps'.format(dest)), dpi=300)
+        os.makedirs(os.path.join(FIGURE_PATH, RTT_TYPE, probe))
+    plt.savefig(os.path.join(FIGURE_PATH, RTT_TYPE, probe, '{0}.eps'.format(dest)), dpi=300, transparent=True)
     plt.close()
 
 
@@ -177,24 +179,32 @@ def plot_fft_autocorr(sig, dest, probe):
 # input = json2csv/4_probes_to_alexa_top50_*.csv
 # output = 由 action 指令来决定进行周期性测量 .csv file 里所有行所产生的 RTT series 调用函数 periodicity_verified_ftt 而生成的 FFT 图
 #          还是 RTT 数值的统计
-def csv_file_pick_rtt_series(target_csv, action):
-    with open(target_csv) as f_handler:
+def csv_file_pick_rtt_series():
+    with open(JSON2CSV_FILE_ALL) as f_handler:
         next(f_handler)
         for line in f_handler:
-            dest = line.split(';')[0]
-            probe = line.split(';')[1]
-            rtt_series_one_line = [float(lines) for lines in line.split(';')[2:]]
+            dest = line.split(';')[1]
+            probe = line.split(';')[2]
+            rtt_series_one_line = [float(lines) for lines in line.split(';')[3:] if float(lines)!= -1]
 
-            if action == "periodicity":
-                plot_fft_autocorr(rtt_series_one_line, dest, probe)
-            elif action == "rtt_statistics":
-                rtt_statistics(rtt_series_one_line, dest, probe)
-            elif action == "autocorr_plot":
-                print "probe:", probe
-                print "dest:", dest
-                print rtt_series_one_line
-                autocorrelation_plot(pd.Series(rtt_series_one_line))
-                plt.show()
+            if len(rtt_series_one_line) != 0:
+
+                if ACTION == "periodicity":
+                    print "probe:", probe
+                    print "dest:", dest
+                    print "rtt_series_one_line", rtt_series_one_line
+                    plot_fft_autocorr(rtt_series_one_line, dest, probe)
+                elif ACTION == "rtt_statistics":
+                    rtt_statistics(rtt_series_one_line, dest, probe)
+                elif ACTION == "autocorr_plot":
+                    print "probe:", probe
+                    print "dest:", dest
+                    print "rtt_series_one_line", rtt_series_one_line
+                    autocorrelation_plot(pd.Series(rtt_series_one_line))
+                    plt.show()
+
+            else:
+                print probe, GENERATE_TYPE, dest, "is an empty list"
 
 
 
@@ -346,12 +356,13 @@ if __name__ == "__main__":
     # periodicity_verified_ftt(y_sin)
 
     # csv_file_pick_rtt_series(os.path.join(ATLAS_TRACES, 'json2csv', '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE)), ACTION)
-    results = dests_probe_confidence_interval()
-    with open('confidence_interval_for_every_dest', 'w') as f_handler:
-        f_handler.write("{0:15}:\t{1:15}\n".format('destination', 'confidence interval (ms)'))
-        for key, values in results.iteritems():
-            f_handler.write("{0:15}:\t{1:15}\n".format(key, values))
+    # results = dests_probe_confidence_interval()
+    # with open('confidence_interval_for_every_dest', 'w') as f_handler:
+    #     f_handler.write("{0:15}:\t{1:15}\n".format('destination', 'confidence interval (ms)'))
+    #     for key, values in results.iteritems():
+    #         f_handler.write("{0:15}:\t{1:15}\n".format(key, values))
 
+    csv_file_pick_rtt_series()
 
 
 

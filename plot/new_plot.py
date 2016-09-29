@@ -25,7 +25,7 @@ EXPERIMENT_NAME = '5_probes_to_alexa_top500'  # Needs to change
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
 IP_VERSION = 'v4'  # 'v6'
 RTT_TYPE = 'avg'  # 'min' or 'max'
-CALCULATE_TYPE = 'median'   # 'mean' or 'median'
+CALCULATE_TYPE = 'mean'   # 'mean' or 'median'
 
 FIGURE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION))
 RTT_REPORT =  os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION),
@@ -197,9 +197,12 @@ def plot_relative_rtt_hist():
 
     print relative_rtt
     print int(math.ceil(max(relative_rtt)))
-    plt.hist(relative_rtt, int(math.ceil(max(relative_rtt))), normed=100)
+    y, x, _ = plt.hist(relative_rtt, int(math.ceil(max(relative_rtt))), normed=1)
+    print "x.max() =", x.max()
+    print "x.min() =", x.min()
+    print "y.max() =", y.max()
     plt.xlabel(r"\textrm{Relative RTT (ms)}", font)
-    plt.ylabel(r"\textrm{Percentage}", font)
+    plt.ylabel(r"\textrm{Probability}", font)
     plt.xticks(fontsize=30, fontname="Times New Roman")
     plt.yticks(fontsize=30, fontname="Times New Roman")
     plt.savefig(
@@ -209,7 +212,7 @@ def plot_relative_rtt_hist():
 
 
 
-# Plot bar of relative RTT using REF_RTT
+# Plot bar of relative RTT using REF_RTT as well as the geolocation
 # input = RTT_REPORT
 # output = relative RTT
 def plot_relative_rtt_bar():
@@ -219,7 +222,10 @@ def plot_relative_rtt_bar():
     except:
         os.makedirs(path_to_store)
 
+    # This dict of dict is used to store the relative RTT
     continent_probe_relative_rtt_dict = {}
+    # This dict is used to store the number of negative relative RTT
+    continent_probe_negative_relative_rtt_dict = {}
     with open(RTT_REPORT) as rtt_report:
         next(rtt_report)
         for line in rtt_report:
@@ -227,13 +233,18 @@ def plot_relative_rtt_bar():
 
             if lines[-1] not in continent_probe_relative_rtt_dict.keys():
                 continent_probe_relative_rtt_dict[lines[-1]] = {}
+                continent_probe_negative_relative_rtt_dict[lines[-1]] = 0
                 if lines[0] not in continent_probe_relative_rtt_dict[lines[-1]].keys():
                     continent_probe_relative_rtt_dict[lines[-1]][lines[0]] = float(lines[probe_index_dict[COMPARED_RTT_PROBE]]) - float(lines[probe_index_dict[REF_RTT_PROBE]])
+                    if continent_probe_relative_rtt_dict[lines[-1]][lines[0]] < 0:
+                        continent_probe_negative_relative_rtt_dict[lines[-1]] += 1
                 else:
                     print lines[0], 'is already in', continent_probe_relative_rtt_dict[lines[-1]].keys()
             else:
                 if lines[0] not in continent_probe_relative_rtt_dict[lines[-1]].keys():
                     continent_probe_relative_rtt_dict[lines[-1]][lines[0]] = float(lines[probe_index_dict[COMPARED_RTT_PROBE]]) - float(lines[probe_index_dict[REF_RTT_PROBE]])
+                    if continent_probe_relative_rtt_dict[lines[-1]][lines[0]] < 0:
+                        continent_probe_negative_relative_rtt_dict[lines[-1]] += 1
                 else:
                     print lines[0], 'is already in', continent_probe_relative_rtt_dict[lines[-1]].keys()
 
@@ -241,9 +252,12 @@ def plot_relative_rtt_bar():
     total_dest_num = 0
     geo_line = 0
     relative_rtt_list = []
+    xticks_list = []
     for continent in continent_probe_relative_rtt_dict.keys():
         print "There are", len(continent_probe_relative_rtt_dict[continent].keys()), "dest in", continent
+        print continent_probe_negative_relative_rtt_dict[continent], "dest,", COMPARED_RTT_PROBE, "is faster than", REF_RTT_PROBE
         print continent_probe_relative_rtt_dict[continent]
+        xticks_list.append(geo_line + 0.5*len(continent_probe_relative_rtt_dict[continent].keys()))
         geo_line = geo_line + len(continent_probe_relative_rtt_dict[continent].keys())
         total_dest_num = total_dest_num + len(continent_probe_relative_rtt_dict[continent].keys())
         relative_rtt_list.extend(continent_probe_relative_rtt_dict[continent].values())
@@ -252,15 +266,19 @@ def plot_relative_rtt_bar():
     print total_dest_num
     plt.bar(range(total_dest_num), relative_rtt_list)
     plt.xlim(min(range(total_dest_num)), max(range(total_dest_num)))
-    plt.xlabel(r"\textrm{Relative RTT (ms)}", font)
-    plt.ylabel(r"\textrm{Percentage}", font)
-    plt.xticks(fontsize=30, fontname="Times New Roman")
+    plt.xlabel(r"\textrm{Destinations}", font)
+    plt.ylabel(r"\textrm{Relative RTT (ms)}", font)
+    plt.xticks(xticks_list,
+               ['{0}:{1}'.format(continent, len(continent_probe_relative_rtt_dict[continent].keys())) for continent in continent_probe_relative_rtt_dict.keys()], fontsize=20, fontname="Times New Roman")
     plt.yticks(fontsize=30, fontname="Times New Roman")
-    plt.savefig(os.path.join(path_to_store, 'Relative_{0}_{1}(RTT)_{2}-{3}.eps'.format(CALCULATE_TYPE, RTT_TYPE, COMPARED_RTT_PROBE, REF_RTT_PROBE)),
-        dpi=300, transparent=True)
+    plt.savefig(os.path.join(path_to_store, 'Relative_{0}_{1}(RTT)_{2}-{3}.eps'.format(CALCULATE_TYPE, RTT_TYPE, COMPARED_RTT_PROBE, REF_RTT_PROBE)), dpi=300, transparent=True)
+    plt.show()
     plt.close()
 
     return continent_probe_relative_rtt_dict
+
+
+
 
 
 
@@ -282,7 +300,10 @@ if __name__ == "__main__":
     # To calculate the correlation of mean/median RTT of every dest compared to FranceIX
     # print correlation_calculator()
 
-    print smallest_continent_probe_rtt_finder()
+    # print smallest_continent_probe_rtt_finder()
 
     # plot_relative_rtt_hist()
+
     # plot_relative_rtt_bar()
+
+    print get_raw_rtt_probes_dict()
