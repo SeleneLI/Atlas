@@ -33,8 +33,8 @@ RTT_REPORT =  os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.
 
 # From RTT_REPORT, we need to define a dict, which key = probe and value is its index in the tile of this file
 # The following 2 dicts should be difned as the same time
-probe_index_dict = {'mPlane': 2, 'FranceIX':3, 'LISP-Lab':4}
-index_probe_dict = {2: 'mPlane', 3: 'FranceIX', 4: 'LISP-Lab'}
+probe_index_dict = {'mPlane': 2, 'FranceIX':3, 'LISP-Lab':4}    # !!!!!!!!!!!!!! Needs to check for every different experiment !!!!!!!!!!!!
+index_probe_dict = {2: 'mPlane', 3: 'FranceIX', 4: 'LISP-Lab'}    # !!!!!!!!!!!!!! Needs to check for every different experiment !!!!!!!!!!!!
 REF_RTT_PROBE = 'FranceIX'
 COMPARED_RTT_PROBE = 'LISP-Lab'
 
@@ -271,16 +271,86 @@ def plot_relative_rtt_bar():
     plt.xticks(xticks_list,
                ['{0}:{1}'.format(continent, len(continent_probe_relative_rtt_dict[continent].keys())) for continent in continent_probe_relative_rtt_dict.keys()], fontsize=20, fontname="Times New Roman")
     plt.yticks(fontsize=30, fontname="Times New Roman")
-    plt.savefig(os.path.join(path_to_store, 'Relative_{0}_{1}(RTT)_{2}-{3}.eps'.format(CALCULATE_TYPE, RTT_TYPE, COMPARED_RTT_PROBE, REF_RTT_PROBE)), dpi=300, transparent=True)
+    # plt.savefig(os.path.join(path_to_store, 'Relative_{0}_{1}(RTT)_{2}-{3}.eps'.format(CALCULATE_TYPE, RTT_TYPE, COMPARED_RTT_PROBE, REF_RTT_PROBE)), dpi=300, transparent=True)
     plt.show()
     plt.close()
 
     return continent_probe_relative_rtt_dict
 
 
+# To get the probe_continent_rtt_dict
+"""
+    This function will return a dict of dict looks like:
+    probe_continent_rtt_dict = {'mPlane': {'UE': [RTT, RTT, ..., RTT], 'US': [RTT, RTT, ..., RTT], ...},
+                                'FranceIX': {'UE': [RTT, RTT, ..., RTT], 'US': [RTT, RTT, ..., RTT], ...},
+                                'LISP-Lab': {'UE': [RTT, RTT, ..., RTT], 'US': [RTT, RTT, ..., RTT], ...}}
+"""
+# input = RTT_REPORT
+# output = probe_continent_rtt_dict
+def get_probe_continent_rtt():
+    probe_continent_rtt_dict = {}
+
+    with open(RTT_REPORT) as rtt_report:
+        next(rtt_report)
+        for line in rtt_report:
+            lines = [j.strip() for j in line.split(";")]
+
+            if lines[-1] not in probe_continent_rtt_dict.keys():
+                probe_continent_rtt_dict[lines[-1]] = {}
+                for probe in ptma.get_probes():
+                    probe_continent_rtt_dict[lines[-1]][probe] = []
+                    probe_continent_rtt_dict[lines[-1]][probe].append(lines[probe_index_dict[probe]])
+            else:
+                for probe in ptma.get_probes():
+                    probe_continent_rtt_dict[lines[-1]][probe].append(lines[probe_index_dict[probe]])
+
+    # for continent in probe_continent_rtt_dict.keys():
+    #     for probe in ptma.get_probes():
+    #         print continent, probe
+    #         print len(probe_continent_rtt_dict[continent][probe])
+    return probe_continent_rtt_dict
+
+
+# To plot the RTT of different dest for each probe, with geo
+# input = probe_continent_rtt_dict (output from the get_probe_continent_rtt())
+# output = figures stored in
+def plot_probe_dest_rtt_geo():
+    path_to_store = os.path.join(FIGURE_PATH, 'Bar', 'RTT_of_dest_by_probe', '{0}_{1}(RTT)'.format(CALCULATE_TYPE, RTT_TYPE))
+    try:
+        os.stat(path_to_store)
+    except:
+        os.makedirs(path_to_store)
+
+    continent_probe_rtt_dict = get_probe_continent_rtt()
+    probe_continent_rtt_dict = paa.reverse_dict_keys(continent_probe_rtt_dict)
+
+    for probe in probe_continent_rtt_dict.keys():
+        temp_list_to_plot = []
+        geo_list = []
+        xticks_list = []
+        xticks_label_list = []
+        for continent in probe_continent_rtt_dict[probe].keys():
+            xticks_label_list.append('{0}:\n{1}'.format(continent,len(probe_continent_rtt_dict[probe][continent])))
+            temp_list_to_plot.extend(probe_continent_rtt_dict[probe][continent])
+            geo_list.append(len(temp_list_to_plot))
+            plt.axvline(geo_list[-1], linewidth=5, color='k')
+            if len(geo_list) > 1:
+                xticks_list.append(geo_list[-2]+0.5*(geo_list[-1]-geo_list[-2]))
+            else:
+                xticks_list.append(0.5 * geo_list[-1])
 
 
 
+        print "geo_list:", geo_list
+        print "xticks_list:", xticks_list
+        plt.bar(range(len(temp_list_to_plot)),temp_list_to_plot, color='yellow')
+        plt.xlim(min(range(len(temp_list_to_plot))), max(range(len(temp_list_to_plot))))
+        plt.xlabel(r"\textrm{Destinations}", font)
+        plt.ylabel(r"\textrm{RTT (ms)}", font)
+        plt.xticks(xticks_list, xticks_label_list, fontsize=20, fontname="Times New Roman")
+        plt.yticks(fontsize=30, fontname="Times New Roman")
+        plt.savefig(os.path.join(path_to_store, 'RTT_from_all_dest_for_{0}.eps'.format(probe)), dpi=300, transparent=True)
+        plt.close()
 
 
 # ==========================================Section: main function declaration======================================
@@ -306,4 +376,6 @@ if __name__ == "__main__":
 
     # plot_relative_rtt_bar()
 
-    print get_raw_rtt_probes_dict()
+    # print get_raw_rtt_probes_dict()
+
+    plot_probe_dest_rtt_geo()
