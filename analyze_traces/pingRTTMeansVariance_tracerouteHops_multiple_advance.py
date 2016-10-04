@@ -14,8 +14,8 @@ import numpy as np
 
 # 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
-IP_VERSION = 'v4'  # 'v6'
-RTT_TYPE = 'avg'    # 'avg' or 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
+IP_VERSION = 'v6'  # 'v6'
+RTT_TYPE = 'max'    # 'avg' or 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
 MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
 CALCULATE_TYPE = 'median'   # 'mean' or 'median'
@@ -140,6 +140,7 @@ def get_clean_traces():
         next(json2csv_file)
         line = next(json2csv_file)
         first_line = [element.strip() for element in line.split(";")]
+        print "first_line:", first_line
         dest = first_line[1]
         m_id = first_line[0]
         probe = first_line[2]
@@ -152,7 +153,8 @@ def get_clean_traces():
             current_dest = tmp_list[1]
             probe = tmp_list[2]
 
-            if dest != current_dest:
+            if m_id != current_m_id:
+            # if dest != current_dest:
 
                 if all_probes_have_rtt(probes_rtt_dict): # if probes_rtt_dict is not empty and has no RTT with all -1
                     dest_probes_rtt_dict[(m_id, dest)] = clean_rtt_series(probes_rtt_dict)
@@ -173,9 +175,15 @@ def get_clean_traces():
 
             probes_rtt_dict[probe] = tmp_list[3:]
 
+        if all_probes_have_rtt(probes_rtt_dict):
+            dest_probes_rtt_dict[(m_id, dest)] = clean_rtt_series(probes_rtt_dict)
+            m_id_list.append(m_id)
+        else:
+            print "Bad dest:", dest
+
     print "len(dest_probes_rtt_dict.keys())", len(dest_probes_rtt_dict.keys())
-    print "len(m_id_list):", len(m_id_list)
-    # print dest_probes_rtt_dict
+    print "len(m_id_list):", m_id_list
+    print dest_probes_rtt_dict.keys()
     return dest_probes_rtt_dict
 
 
@@ -202,6 +210,7 @@ def generate_report(dest_probes_rtt_dict):
         csv_title.extend(['Country', 'Continent'])
         csv_writter.writerow(csv_title)
         for key, value in dest_probes_rtt_dict.iteritems():
+            # print key
             csv_row = []
             current_m_id, current_dest = key[0], key[1]
             csv_row.append(current_m_id)
@@ -218,9 +227,16 @@ def generate_report(dest_probes_rtt_dict):
             else:
                 print "CALCULATE_TYPE should be 'mean' or 'median' !! Retry "
             csv_row.extend([np.var(element) for element in rtts])
-            csv_row.extend(dest_country_continent[key[1]])
 
-            csv_writter.writerow(csv_row)
+            try:
+                csv_row.extend(dest_country_continent[key[1]])
+                csv_writter.writerow(csv_row)
+            except:
+                print "The following measurement_id and IPv6 are not in top_510_websites_fr.csv:"
+                print current_m_id
+                print key[1]
+
+
 
 
 
@@ -234,11 +250,11 @@ if __name__ == "__main__":
                    'MR_2': [1, -1, 1, 5, 2]}
     # print all_probes_have_rtt(dict_target)
 
-    print clean_rtt_series(dict_target)
+    # print clean_rtt_series(dict_target)
 
     # print get_clean_traces().keys()[0]
 
-    # generate_report(get_clean_traces())
+    generate_report(get_clean_traces())
 
 
 

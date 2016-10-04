@@ -190,16 +190,16 @@ def csv_file_pick_rtt_series():
             if len(rtt_series_one_line) != 0:
 
                 if ACTION == "periodicity":
-                    print "probe:", probe
-                    print "dest:", dest
-                    print "rtt_series_one_line", rtt_series_one_line
+                    # print "probe:", probe
+                    # print "dest:", dest
+                    # print "rtt_series_one_line", rtt_series_one_line
                     plot_fft_autocorr(rtt_series_one_line, dest, probe)
                 elif ACTION == "rtt_statistics":
                     rtt_statistics(rtt_series_one_line, dest, probe)
                 elif ACTION == "autocorr_plot":
-                    print "probe:", probe
-                    print "dest:", dest
-                    print "rtt_series_one_line", rtt_series_one_line
+                    # print "probe:", probe
+                    # print "dest:", dest
+                    # print "rtt_series_one_line", rtt_series_one_line
                     autocorrelation_plot(pd.Series(rtt_series_one_line))
                     plt.show()
 
@@ -213,7 +213,7 @@ def csv_file_pick_rtt_series():
 def rtt_statistics(rtt_series, dest, probe):
 
     rtt_series_int = [int(float(value)) for value in rtt_series]
-    print "rtt_series_int:", rtt_series_int
+    # print "rtt_series_int:", rtt_series_int
 
     dict_rtt_statistics = {}
     for rtt in rtt_series_int:
