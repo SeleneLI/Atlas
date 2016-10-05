@@ -9,11 +9,13 @@ from config.config import *
 import math_tool as math_tool
 import csv
 import numpy as np
-
+import glob
+import json
+import pprint
 # ==========================================Section: constant variable declaration======================================
 
 # 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
-GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
+GENERATE_TYPE = 'traceroute'  # 'ping' or 'traceroute'
 IP_VERSION = 'v6'  # 'v6'
 RTT_TYPE = 'max'    # 'avg' or 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
@@ -25,7 +27,7 @@ EXPERIMENT_NAME = '5_probes_to_alexa_top500'
 # The .csv tables we need to base on
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION),'{0}_{1}.csv'.format(EXPERIMENT_NAME,RTT_TYPE))
 # The folder path, where we will store the filtered .csv tables
-FILTERED_TRACE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION))
+FILTERED_TRACE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION))
 DEST_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, 'top_510_websites_fr.csv')
 
 # ==========================================Section: functions declaration======================================
@@ -204,7 +206,7 @@ def generate_report(dest_probes_rtt_dict):
         csv_writter = csv.writer(f_handler, delimiter=';')
         csv_title = ['mesurement id', 'Destination']
         csv_title.extend(
-            ["{0}({1} RTT) from {2}".format(CALCULATE_TYPE,RTT_TYPE, probe_name) for probe_name in probes_list])
+            ["{0}({1} RTT) from {2}".format(CALCULATE_TYPE, RTT_TYPE, probe_name) for probe_name in probes_list])
         csv_title.extend(
             ["variance from {1}".format(RTT_TYPE, probe_name) for probe_name in probes_list])
         csv_title.extend(['Country', 'Continent'])
@@ -238,6 +240,109 @@ def generate_report(dest_probes_rtt_dict):
 
 
 
+# ==========================================Section: Traceroute analysis============================================
+def retrieve_traversed_ip(results):
+    """
+        Retrive the traversed IP address from a given list of dictionary
+    """
+    res = "*"
+    for icmp_reply in results:
+        if "from" in icmp_reply.keys():
+            return icmp_reply['from']
+    # If no ICMP reply record contains key "from", means all the ICMP reply timeout, return symbol of star
+    return res
+
+
+def process_traceroute(json_traces_folder):
+
+    files = glob.glob(json_traces_folder)
+
+    hops_count_dict = {}
+
+    for trace_p in files:
+        with open(trace_p, 'r') as f_handler:
+            json_data = json.load(f_handler)
+            if len(json_data) != 0:
+                for record in json_data:
+                    msm_id = record['msm_id']
+                    prb_id = record['prb_id']
+                    dst_addr = record['dst_addr']
+                    # print "record", record
+                    hop_list = record['result']
+                    hop_ip_list = [retrieve_traversed_ip(hop['result']) for hop in hop_list]
+                    # frequent_route_list.append("->".join(hop_ip_list))
+                    # we can rely the most_common() method to find out the most occurrences of routes
+                    # The output of most_common() is a list of tuple
+                    #     print Counter(frequent_route_list).most_common(1)[0][0]
+                    # hops_number = len(Counter(frequent_route_list).most_common(1)[0][0].split("->"))
+                    print msm_id, dst_addr, prb_id, "->".join(hop_ip_list)
+                    if (msm_id, dst_addr) in hops_count_dict.keys():
+                        if prb_id not in hops_count_dict[(msm_id, dst_addr)].keys():
+                            hops_count_dict[(msm_id, dst_addr)][prb_id] = ["->".join(hop_ip_list)]
+                        else:
+                             hops_count_dict[(msm_id, dst_addr)][prb_id].append("->".join(hop_ip_list))
+                    else:
+                        hops_count_dict[(msm_id, dst_addr)] = {}
+                        hops_count_dict[(msm_id, dst_addr)][prb_id] = ["->".join(hop_ip_list)]
+
+    for key, value in hops_count_dict.iteritems():
+        for prb_id, hop_ip_list in value.iteritems():
+            hops_number = len(Counter(hop_ip_list).most_common(1)[0][0].split("->"))
+            value[prb_id] = hops_number
+
+    pprint.pprint(hops_count_dict)
+    return hops_count_dict
+
+
+
+def generate_report_traceroute(dest_probes_rtt_dict):
+
+
+    try:
+        os.stat(FILTERED_TRACE_PATH)
+    except:
+        os.makedirs(FILTERED_TRACE_PATH)
+
+    clean_file = os.path.join(FILTERED_TRACE_PATH, '{0}_{1}_report_{2}_{3}.csv'.format(GENERATE_TYPE,IP_VERSION,RTT_TYPE,CALCULATE_TYPE))
+
+    probes_list = get_probes()
+
+    dest_country_continent = get_country_continent()
+
+    with open(clean_file, 'wb') as f_handler:
+        csv_writter = csv.writer(f_handler, delimiter=';')
+        csv_title = ['mesurement id', 'Destination']
+        csv_title.extend(
+            ["hop numbers from {0}".format(probe_name) for probe_name in probes_list])
+        csv_title.extend(['Country', 'Continent'])
+        csv_writter.writerow(csv_title)
+
+        for key, value in dest_probes_rtt_dict.iteritems():
+            print key
+            pprint.pprint(value)
+            csv_row = []
+            print key
+            current_m_id, current_dest = key[0], key[1]
+            csv_row.append(current_m_id)
+            csv_row.append(current_dest)
+            hops = []
+            for probe in probes_list:
+                for prb_id, prb_name in PROBE_ID_NAME_DICT.iteritems():
+                    if prb_name == probe:
+                        # rtt_tmp = [float(element) for element in value[int(prb_id)]]
+                        hops.append(value[int(prb_id)])
+            csv_row.extend(hops)
+
+            try:
+                csv_row.extend(dest_country_continent[key[1]])
+                csv_writter.writerow(csv_row)
+            except:
+                print "The following measurement_id and IPv6 are not in top_510_websites_fr.csv:"
+                print current_m_id
+                print key[1]
+
+
+
 
 
 
@@ -254,7 +359,9 @@ if __name__ == "__main__":
 
     # print get_clean_traces().keys()[0]
 
-    generate_report(get_clean_traces())
+    # generate_report(get_clean_traces())
+
+    JSON_TRACES_FOLDER = os.path.join("..", "traces", "Produced_traces", EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION), "*.json")
 
 
-
+    generate_report_traceroute(process_traceroute(JSON_TRACES_FOLDER))
