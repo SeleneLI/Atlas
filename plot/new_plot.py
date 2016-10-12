@@ -22,14 +22,16 @@ mpl.rcParams.update({'figure.autolayout': True})
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '5_probes_to_alexa_top500'  # Needs to change
-GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
+GENERATE_TYPE = 'traceroute'  # 'ping' or 'traceroute'
 IP_VERSION = 'v4'  # 'v6'
-RTT_TYPE = 'max'  # 'min' or 'max'
-CALCULATE_TYPE = 'mean'   # 'mean' or 'median'
+RTT_TYPE = 'avg'  # 'min' or 'max'
+CALCULATE_TYPE = 'median'   # 'mean' or 'median'
 
 FIGURE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION))
 RTT_REPORT =  os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION),
                            '{0}_{1}_report_{2}_{3}.csv'.format(GENERATE_TYPE,IP_VERSION,RTT_TYPE,CALCULATE_TYPE))
+TRACEROUTE_REPORT =  os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION),
+                           '{0}_{1}_report.csv'.format(GENERATE_TYPE,IP_VERSION))
 
 # From RTT_REPORT, we need to define a dict, which key = probe and value is its index in the tile of this file
 # The following 2 dicts should be difned as the same time
@@ -114,6 +116,7 @@ def plot_cdf_rtt_probes():
     plt.xticks(fontsize=30, fontname="Times New Roman")
     plt.yticks(fontsize=30, fontname="Times New Roman")
     plt.legend(loc='best', fontsize=30)
+    plt.grid(True)
     plt.savefig(os.path.join(FIGURE_PATH, 'CDF_figures', RTT_TYPE, 'CDF_{0}(RTT)_{1}.eps'.format(RTT_TYPE, CALCULATE_TYPE)), dpi=300, transparent=True)
     plt.close()
 
@@ -128,7 +131,7 @@ def correlation_calculator():
 
 # Make a statistics of the smallest RTT between the different probes
 # input = RTT_REPORT
-# output = correlation coefficient
+# output = continent_probe_smallest_rtt_dict and a figure
 def smallest_continent_probe_rtt_finder():
     path_to_store = os.path.join(FIGURE_PATH, 'Histogram', 'Smallest_RTT')
     try:
@@ -140,7 +143,13 @@ def smallest_continent_probe_rtt_finder():
     stop_index = max(probe_index_dict.values()) + 1
 
     continent_probe_smallest_rtt_dict = {}
-    with open(RTT_REPORT) as rtt_report:
+    report= ''
+    if GENERATE_TYPE == 'ping':
+        report = RTT_REPORT
+    elif GENERATE_TYPE == 'traceroute':
+        report = TRACEROUTE_REPORT
+
+    with open(report) as rtt_report:
         next(rtt_report)
         for line in rtt_report:
             lines = [j.strip() for j in line.split(";")]
@@ -170,9 +179,11 @@ def smallest_continent_probe_rtt_finder():
     plt.ylabel(r"\textrm{Percentage}", font)
     plt.xticks(fontsize=30, fontname="Times New Roman")
     plt.yticks(fontsize=30, fontname="Times New Roman")
-    plt.savefig(os.path.join(path_to_store,
-                             'Smallest_{0}_{1}(RTT)_proporation.eps'.format(CALCULATE_TYPE, RTT_TYPE)),
-                dpi=300, transparent=True)
+    plt.legend(loc='best', fontsize=30)
+    if GENERATE_TYPE == 'ping':
+        plt.savefig(os.path.join(path_to_store, 'Smallest_{0}_{1}(RTT)_proporation.eps'.format(CALCULATE_TYPE, RTT_TYPE)), dpi=300, transparent=True)
+    elif GENERATE_TYPE == 'traceroute':
+        plt.savefig(os.path.join(path_to_store, 'Smallest_hops_num_proporation.eps'.format(CALCULATE_TYPE, RTT_TYPE)), dpi=300, transparent=True)
     plt.close()
 
     print smallest_rtt_percentage
@@ -184,32 +195,45 @@ def smallest_continent_probe_rtt_finder():
 # input = RTT_REPORT
 # output = relative RTT
 def plot_relative_rtt_hist():
-    path_to_store = os.path.join(FIGURE_PATH, 'Histogram', 'Relative_RTT')
+    path_to_store = ''
+    if GENERATE_TYPE == 'ping':
+        path_to_store = os.path.join(FIGURE_PATH, 'Histogram', 'Relative_RTT')
+    elif GENERATE_TYPE == 'traceroute':
+        path_to_store = os.path.join(FIGURE_PATH, 'Histogram', 'Relative_hops_num')
     try:
         os.stat(path_to_store)
     except:
         os.makedirs(path_to_store)
 
     relative_rtt = []
-    with open(RTT_REPORT) as rtt_report:
+
+    report = ''
+    if GENERATE_TYPE == 'ping':
+        report = RTT_REPORT
+    elif GENERATE_TYPE == 'traceroute':
+        report = TRACEROUTE_REPORT
+    with open(report) as rtt_report:
         next(rtt_report)
         for line in rtt_report:
             lines = [j.strip() for j in line.split(";")]
             relative_rtt.append(float(lines[probe_index_dict[COMPARED_RTT_PROBE]]) - float(lines[probe_index_dict[REF_RTT_PROBE]]))
 
-    print relative_rtt
+    print 'relative_rtt:', relative_rtt
     print int(math.ceil(max(relative_rtt)))
     y, x, _ = plt.hist(relative_rtt, int(math.ceil(max(relative_rtt))), normed=1)
     print "x.max() =", x.max()
     print "x.min() =", x.min()
     print "y.max() =", y.max()
-    plt.xlabel(r"\textrm{Relative RTT (ms)}", font)
     plt.ylabel(r"\textrm{Probability}", font)
     plt.xticks(fontsize=30, fontname="Times New Roman")
     plt.yticks(fontsize=30, fontname="Times New Roman")
-    plt.savefig(
-        os.path.join(path_to_store, 'Relative_{0}_{1}(RTT)_{2}-{3}.eps'.format(CALCULATE_TYPE,RTT_TYPE,COMPARED_RTT_PROBE, REF_RTT_PROBE)),
-        dpi=300, transparent=True)
+    if GENERATE_TYPE == 'ping':
+        plt.xlabel(r"\textrm{Relative RTT (ms)}", font)
+        plt.savefig(os.path.join(path_to_store,'Relative_{0}_{1}(RTT)_{2}-{3}.eps'.format(CALCULATE_TYPE, RTT_TYPE, COMPARED_RTT_PROBE,REF_RTT_PROBE)),dpi=300, transparent=True)
+    elif GENERATE_TYPE == 'traceroute':
+        plt.xlabel(r"\textrm{Relative hops number}", font)
+        plt.savefig(os.path.join(path_to_store,'Relative_hops_num_{0}-{1}.eps'.format(COMPARED_RTT_PROBE,REF_RTT_PROBE)),dpi=300, transparent=True)
+
     plt.close()
 
 
@@ -218,7 +242,11 @@ def plot_relative_rtt_hist():
 # input = RTT_REPORT
 # output = relative RTT
 def plot_relative_rtt_bar():
-    path_to_store = os.path.join(FIGURE_PATH, 'Bar', 'Relative_RTT')
+    path_to_store = ''
+    if GENERATE_TYPE == 'ping':
+        path_to_store = os.path.join(FIGURE_PATH, 'Bar', 'Relative_RTT')
+    elif GENERATE_TYPE == 'traceroute':
+        path_to_store = os.path.join(FIGURE_PATH, 'Bar', 'Relative_hops_num')
     try:
         os.stat(path_to_store)
     except:
@@ -228,7 +256,13 @@ def plot_relative_rtt_bar():
     continent_probe_relative_rtt_dict = {}
     # This dict is used to store the number of negative relative RTT
     continent_probe_negative_relative_rtt_dict = {}
-    with open(RTT_REPORT) as rtt_report:
+
+    report = ''
+    if GENERATE_TYPE == 'ping':
+        report = RTT_REPORT
+    elif GENERATE_TYPE == 'traceroute':
+        report = TRACEROUTE_REPORT
+    with open(report) as rtt_report:
         next(rtt_report)
         for line in rtt_report:
             lines = [j.strip() for j in line.split(";")]
@@ -270,12 +304,19 @@ def plot_relative_rtt_bar():
     print total_dest_num
     plt.bar(range(total_dest_num), relative_rtt_list)
     plt.xlim(min(range(total_dest_num)), max(range(total_dest_num)))
+    plt.ylim(-150, 150)
     plt.xlabel(r"\textrm{Destinations}", font)
-    plt.ylabel(r"\textrm{Relative RTT (ms)}", font)
     plt.xticks(xticks_list,
                ['{0}:{1}'.format(continent, len(continent_probe_relative_rtt_dict[continent].keys())) for continent in continent_probe_relative_rtt_dict.keys()], fontsize=20, fontname="Times New Roman")
     plt.yticks(fontsize=30, fontname="Times New Roman")
-    plt.savefig(os.path.join(path_to_store, 'Relative_{0}_{1}(RTT)_{2}-{3}.eps'.format(CALCULATE_TYPE, RTT_TYPE, COMPARED_RTT_PROBE, REF_RTT_PROBE)), dpi=300, transparent=True)
+
+    if GENERATE_TYPE == 'ping':
+        plt.ylabel(r"\textrm{Relative RTT (ms)}", font)
+        plt.savefig(os.path.join(path_to_store, 'Relative_{0}_{1}(RTT)_{2}-{3}.eps'.format(CALCULATE_TYPE, RTT_TYPE, COMPARED_RTT_PROBE, REF_RTT_PROBE)), dpi=300, transparent=True)
+    elif GENERATE_TYPE == 'traceroute':
+        plt.ylabel(r"\textrm{Relative hops number}", font)
+        plt.savefig(os.path.join(path_to_store, 'Relative_hops_num_{0}-{1}.eps'.format(COMPARED_RTT_PROBE, REF_RTT_PROBE)), dpi=300, transparent=True)
+
     plt.close()
 
     return continent_probe_relative_rtt_dict
@@ -352,6 +393,7 @@ def plot_probe_dest_rtt_geo():
         plt.ylabel(r"\textrm{RTT (ms)}", font)
         plt.xticks(xticks_list, xticks_label_list, fontsize=20, fontname="Times New Roman")
         plt.yticks(fontsize=30, fontname="Times New Roman")
+        plt.legend(loc='best', fontsize=30)
         plt.savefig(os.path.join(path_to_store, 'RTT_from_all_dest_for_{0}.eps'.format(probe)), dpi=300, transparent=True)
         plt.close()
 
@@ -365,7 +407,7 @@ if __name__ == "__main__":
         os.makedirs(os.path.join(FIGURE_PATH))
 
     # # To plot the RTT series figure for each dest
-    plot_rtt_series_by_mid('5276479')
+    # plot_rtt_series_by_mid('5276479')
 
     # To plot the CDF of mean/median RTT in RTT_REPORT
     # plot_cdf_rtt_probes()
@@ -373,12 +415,12 @@ if __name__ == "__main__":
     # To calculate the correlation of mean/median RTT of every dest compared to FranceIX
     # correlation_calculator()
 
-    # smallest_continent_probe_rtt_finder()
-
+    smallest_continent_probe_rtt_finder()
+    #
     # plot_relative_rtt_hist()
 
-    plot_relative_rtt_bar()
+    # plot_relative_rtt_bar()
 
     # print get_raw_rtt_probes_dict()
 
-    plot_probe_dest_rtt_geo()
+    # plot_probe_dest_rtt_geo()
