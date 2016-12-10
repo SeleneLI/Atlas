@@ -29,7 +29,7 @@ def ping_v4(target, mes_id_file):
     requests.packages.urllib3.disable_warnings() #disable urllib3 warnings
     # Measurement definition
     #target = 'www.enst.fr'
-    description = 'Ping_v4 to %s from probe 22341, 2403, 13842, 2848 and anchor 6118' % target
+    description = 'Ping_v4 to %s from probe 22341, 2403, 13842, 3141 and anchor 6118' % target
     af = 4 # can be IPv4 or IPv6
     type = 'ping'
     resolve_on_probe = False # Set to 'true' if you want the probe to resolve your target instead of the RIPE Atlas servers.
@@ -50,7 +50,7 @@ def ping_v4(target, mes_id_file):
     #asn: e.g. 147
     #probes: comma-separated list of integers as the value, e.g. "1,2,3"
     #msm (re-use the probes in an existing measurement by specifying the id): e.g. 2310237
-    probe_selec_value = '22341, 2403, 13842, 2848, 6118'
+    probe_selec_value = '22341, 2403, 13842, 3141, 6118'
     tag_include = ["system-ipv4-works", "system-anchor"]
     tag_exclude = ["system-ipv4-doesnt-work", "system-ipv6-doesnt-work",]
     # there are two types of tags: system assigened ones, see https://atlas.ripe.net/docs/probe-tags/
@@ -100,7 +100,7 @@ def ping_v6(target, mes_id_file):
     requests.packages.urllib3.disable_warnings() #disable urllib3 warnings
     # Measurement definition
     #target = 'www.enst.fr'
-    description = 'Ping_v6 to %s from probe 22341, 2403, 13842, 2848 and anchor 6118' % target
+    description = 'Ping_v6 to %s from probe 22341, 2403, 13842, 3141 and anchor 6118' % target
     af = 6 # can be IPv4 or IPv6
     type = 'ping'
     resolve_on_probe = False # Set to 'true' if you want the probe to resolve your target instead of the RIPE Atlas servers.
@@ -121,7 +121,7 @@ def ping_v6(target, mes_id_file):
     #asn: e.g. 147
     #probes: comma-separated list of integers as the value, e.g. "1,2,3"
     #msm (re-use the probes in an existing measurement by specifying the id): e.g. 2310237
-    probe_selec_value = '22341, 2403, 13842, 2848, 6118'
+    probe_selec_value = '22341, 2403, 13842, 3141, 6118'
     tag_include = ["system-ipv4-works", "system-anchor"]
     tag_exclude = ["system-ipv4-doesnt-work", "system-ipv6-doesnt-work",]
     # there are two types of tags: system assigened ones, see https://atlas.ripe.net/docs/probe-tags/
@@ -172,7 +172,7 @@ def traceroute_v4(target, mes_id_file):
     requests.packages.urllib3.disable_warnings() #disable urllib3 warnings
     # Measurement definition
     #target = 'www.enst.fr'
-    description = 'Traceroute_v4 to %s from probe 22341, 2403, 13842, 2848 and anchor 6118' % target
+    description = 'Traceroute_v4 to %s from probe 22341, 2403, 13842, 3141 and anchor 6118' % target
     af = 4 # can be IPv4 or IPv6
     type = 'traceroute'
     resolve_on_probe = False # Set to 'true' if you want the probe to resolve your target instead of the RIPE Atlas servers.
@@ -193,7 +193,7 @@ def traceroute_v4(target, mes_id_file):
     #asn: e.g. 147
     #probes: comma-separated list of integers as the value, e.g. "1,2,3"
     #msm (re-use the probes in an existing measurement by specifying the id): e.g. 2310237
-    probe_selec_value = '22341, 2403, 13842, 2848, 6118'
+    probe_selec_value = '22341, 2403, 13842, 3141, 6118'
     tag_include = ["system-ipv4-works", "system-anchor"]
     tag_exclude = ["system-ipv4-doesnt-work", "system-ipv6-doesnt-work",]
     # there are two types of tags: system assigened ones, see https://atlas.ripe.net/docs/probe-tags/
@@ -248,7 +248,7 @@ def traceroute_v6(target, mes_id_file):
     requests.packages.urllib3.disable_warnings() #disable urllib3 warnings
     # Measurement definition
     #target = 'www.enst.fr'
-    description = 'Traceroute_v6 to %s from probe 22341, 2403, 13842, 2848 and anchor 6118' % target
+    description = 'Traceroute_v6 to %s from probe 22341, 2403, 13842, 3141 and anchor 6118' % target
     af = 6 # can be IPv4 or IPv6
     type = 'traceroute'
     resolve_on_probe = False # Set to 'true' if you want the probe to resolve your target instead of the RIPE Atlas servers.
@@ -269,7 +269,7 @@ def traceroute_v6(target, mes_id_file):
     #asn: e.g. 147
     #probes: comma-separated list of integers as the value, e.g. "1,2,3"
     #msm (re-use the probes in an existing measurement by specifying the id): e.g. 2310237
-    probe_selec_value = '22341, 2403, 13842, 2848, 6118'
+    probe_selec_value = '22341, 2403, 13842, 3141, 6118'
     tag_include = ["system-ipv4-works", "system-anchor"]
     tag_exclude = ["system-ipv4-doesnt-work", "system-ipv6-doesnt-work",]
     # there are two types of tags: system assigened ones, see https://atlas.ripe.net/docs/probe-tags/
