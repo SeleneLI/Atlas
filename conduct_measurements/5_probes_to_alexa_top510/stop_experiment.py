@@ -10,7 +10,7 @@ from config.config import *
 # AUTH = "%s/auth" % os.environ['PWD'] # put the KEY in file named 'auth' under current folder
 AUTH = os.path.join(os.path.dirname(__file__), "auth_stop")
 
-MEASUREMENT_NAME = '5_probes_to_alexa_top500'
+MEASUREMENT_NAME = '5_probes_to_alexa_top510'
 MES_ID_PING_V4_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_ping_v4_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
 MES_ID_PING_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_ping_v6_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
 MES_ID_TRACEROUTE_V4_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v4_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
