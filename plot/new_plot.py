@@ -107,6 +107,8 @@ def plot_cdf_rtt_probes():
         cdf_rtt_probes_dict[probe] = ECDF(raw_rtt_probes_dict[probe])
         x = range(int(math.floor(min(raw_rtt_probes_dict[probe]))), int(math.ceil(max(raw_rtt_probes_dict[probe]))+1))
         y = cdf_rtt_probes_dict[probe](range(int(math.floor(min(raw_rtt_probes_dict[probe]))), int(math.ceil(max(raw_rtt_probes_dict[probe]))+1)))
+        print x
+        print y
         # print int(math.floor(min(raw_rtt_probes_dict[probe]))), int(math.ceil(max(raw_rtt_probes_dict[probe]))+1)
         print int(math.floor(min(raw_rtt_probes_dict[probe]))), int(math.ceil(max(raw_rtt_probes_dict[probe]))+1)
         plt.plot(x, y, linewidth = 3, label = probe)
@@ -415,9 +417,9 @@ if __name__ == "__main__":
     # To calculate the correlation of mean/median RTT of every dest compared to FranceIX
     # correlation_calculator()
 
-    smallest_continent_probe_rtt_finder()
+    # smallest_continent_probe_rtt_finder()
     #
-    # plot_relative_rtt_hist()
+    plot_relative_rtt_hist()
 
     # plot_relative_rtt_bar()
 
