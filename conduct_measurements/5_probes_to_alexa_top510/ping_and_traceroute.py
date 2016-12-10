@@ -346,25 +346,25 @@ if __name__ == "__main__":
     print "target_site_v4_l:", len(target_site_v4_l), target_site_v4_l
     print "target_site_v6_l", len(target_site_v6_l), target_site_v6_l
 
-    # with open(MES_ID_PING_V4_FILE, 'w') as ping_v4_file, open(MES_ID_PING_V6_FILE, 'w') as ping_v6_file, \
-    #         open(MES_ID_TRACEROUTE_V4_FILE, 'w') as traceroute_v4_file, open(MES_ID_TRACEROUTE_V6_FILE, 'w') as traceroute_v6_file:
-    #     # target_site_l = [str(e) for e in target_site_v4_l]
-    #     for target in target_site_v4_l:
-    #         try:
-    #             ping_v4(target, ping_v4_file)
-    #         except requests.exceptions.HTTPError:
-    #             print "Due to ping_v4, cannot launch mesurement for {0}".format(target)
-    #         try:
-    #             traceroute_v4(target, traceroute_v4_file)
-    #         except requests.exceptions.HTTPError:
-    #             print "Due to traceroute_v4, cannot launch mesurement for {0}".format(target)
-    #
-    #     for target in target_site_v6_l:
-    #         try:
-    #             ping_v6(target, ping_v6_file)
-    #         except requests.exceptions.HTTPError:
-    #             print "Due to ping_v6, cannot launch mesurement for {0}".format(target)
-    #         try:
-    #             traceroute_v6(target, traceroute_v6_file)
-    #         except requests.exceptions.HTTPError:
-    #             print "Due to traceroute_v6, cannot launch mesurement for {0}".format(target)
+    with open(MES_ID_PING_V4_FILE, 'w') as ping_v4_file, open(MES_ID_PING_V6_FILE, 'w') as ping_v6_file, \
+            open(MES_ID_TRACEROUTE_V4_FILE, 'w') as traceroute_v4_file, open(MES_ID_TRACEROUTE_V6_FILE, 'w') as traceroute_v6_file:
+        # target_site_l = [str(e) for e in target_site_v4_l]
+        for target in target_site_v4_l:
+            try:
+                ping_v4(target, ping_v4_file)
+            except requests.exceptions.HTTPError:
+                print "Due to ping_v4, cannot launch mesurement for {0}".format(target)
+            try:
+                traceroute_v4(target, traceroute_v4_file)
+            except requests.exceptions.HTTPError:
+                print "Due to traceroute_v4, cannot launch mesurement for {0}".format(target)
+
+        for target in target_site_v6_l:
+            try:
+                ping_v6(target, ping_v6_file)
+            except requests.exceptions.HTTPError:
+                print "Due to ping_v6, cannot launch mesurement for {0}".format(target)
+            try:
+                traceroute_v6(target, traceroute_v6_file)
+            except requests.exceptions.HTTPError:
+                print "Due to traceroute_v6, cannot launch mesurement for {0}".format(target)
