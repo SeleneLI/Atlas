@@ -16,6 +16,11 @@ MES_ID_PING_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME,
 MES_ID_TRACEROUTE_V4_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v4_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
 MES_ID_TRACEROUTE_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v6_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
 
+MES_ID_PING_V4_FILE_RUN = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_ping_v4_measurement_ids_stop.txt'.format(MEASUREMENT_NAME))
+MES_ID_PING_V6_FILE_RUN = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_ping_v6_measurement_ids_stop.txt'.format(MEASUREMENT_NAME))
+MES_ID_TRACEROUTE_V4_FILE_RUN = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v4_measurement_ids_stop.txt'.format(MEASUREMENT_NAME))
+MES_ID_TRACEROUTE_V6_FILE_RUN = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v6_measurement_ids_stop.txt'.format(MEASUREMENT_NAME))
+
 # Doesn't work if we use auth_file !!!!
 # # read key from auth file
 # # if not os.path.exists(AUTH):
@@ -26,14 +31,17 @@ MES_ID_TRACEROUTE_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT
 # print type(ATLAS_STOP_API_KEY), ATLAS_STOP_API_KEY
 
 # Stop the experiment request by using its measurement id
-def stop_exp(msm_id_list):
-    for measurement_id in msm_id_list:
+def stop_exp(msm_id_list, stop_file):
+    with open(stop_file, 'w') as f_stop:
+        for measurement_id in msm_id_list:
 
-        atlas_request = AtlasStopRequest(msm_id = measurement_id, key = "fbae8ef7-d73e-413a-af8e-9d709dcc1148")
+            atlas_request = AtlasStopRequest(msm_id = measurement_id, key = "fbae8ef7-d73e-413a-af8e-9d709dcc1148")
 
-        (is_success, response) = atlas_request.create()
-        print is_success
-        print response
+            (is_success, response) = atlas_request.create()
+            if is_success:
+                f_stop.write(str(measurement_id) + '\n')
+            print is_success
+            print response
 
 
 if __name__ == "__main__":
@@ -60,8 +68,8 @@ if __name__ == "__main__":
     print traceroute_v4_msm_id_list
     print traceroute_v6_msm_id_list
 
-    stop_exp(ping_v4_msm_id_list)
-    stop_exp(ping_v6_msm_id_list)
-    stop_exp(traceroute_v4_msm_id_list)
-    stop_exp(traceroute_v6_msm_id_list)
+    stop_exp(ping_v4_msm_id_list, MES_ID_PING_V4_FILE_RUN)
+    stop_exp(ping_v6_msm_id_list, MES_ID_PING_V6_FILE_RUN)
+    stop_exp(traceroute_v4_msm_id_list, MES_ID_TRACEROUTE_V4_FILE_RUN)
+    stop_exp(traceroute_v6_msm_id_list, MES_ID_TRACEROUTE_V6_FILE_RUN)
 
