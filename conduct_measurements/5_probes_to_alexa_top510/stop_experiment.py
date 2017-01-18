@@ -68,8 +68,8 @@ if __name__ == "__main__":
     print traceroute_v4_msm_id_list
     print traceroute_v6_msm_id_list
 
-    stop_exp(ping_v4_msm_id_list, MES_ID_PING_V4_FILE_RUN)
-    stop_exp(ping_v6_msm_id_list, MES_ID_PING_V6_FILE_RUN)
+    # stop_exp(ping_v4_msm_id_list, MES_ID_PING_V4_FILE_RUN)
+    # stop_exp(ping_v6_msm_id_list, MES_ID_PING_V6_FILE_RUN)
     stop_exp(traceroute_v4_msm_id_list, MES_ID_TRACEROUTE_V4_FILE_RUN)
-    stop_exp(traceroute_v6_msm_id_list, MES_ID_TRACEROUTE_V6_FILE_RUN)
+    # stop_exp(traceroute_v6_msm_id_list, MES_ID_TRACEROUTE_V6_FILE_RUN)
 
