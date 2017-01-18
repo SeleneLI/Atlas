@@ -11,25 +11,26 @@ from config.config import *
 
 # ==========================================Section: constant variable declaration======================================
 # probe id和此probe的IP地址间的对应关系 22341, 2403, 13842, 2848, 6118
-PROBE_ID_IP_DICT = {
-    "132.227.120.130": "22341",
-    "37.49.234.132": "6118",
-    "137.194.165.62": "13842",
-    "153.16.38.64": "2403",
-    "81.56.47.149": "2848"
-}
-PROBE_ID_NAME_DICT = {
-
-    "6118"  : "FranceIX",
-    "13842" : "mPlane",
-    "2403" : "LIP6",
-    "22341" : "LISP-Lab",
-    "2848": "home"
-}
+# PROBE_ID_IP_DICT = {
+#     "132.227.120.130": "22341",
+#     "37.49.234.132": "6118",
+#     "137.194.165.62": "13842",
+#     "153.16.38.64": "2403",
+#     "217.70.181.250": "3141"
+# }
+# 
+# PROBE_ID_NAME_DICT = {
+#
+#     "6118"  : "FranceIX",
+#     "13842" : "mPlane",
+#     "2403" : "LIP6",
+#     "22341" : "LISP-Lab",
+#     "3141": "Gandi"     # Gandi Massena Paris
+# }
 
 # EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的自文件夹名称
 # MEASUREMENT_ID_RECORD_FILE 为存储measurement id的.txt文档
-EXPERIMENT_NAME = '5_probes_to_alexa_top500'
+EXPERIMENT_NAME = '5_probes_to_alexa_top510'
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
 IP_VERSION = 'v4'  # 'v6'
 MEASUREMENT_ID_RECORD_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME,'{0}_{1}_{2}_measurement_ids_complete.txt'.format(EXPERIMENT_NAME,GENERATE_TYPE,IP_VERSION))
@@ -37,9 +38,9 @@ MEASUREMENT_ID_RECORD_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT
 
 def downlod_trace(measurement_id):
 
-    requests.packages.urllib3.disable_warnings() #disable urllib3 warnings
+    requests.packages.urllib3.disable_warnings() #disable urllib3 warnings n
 
-    # read key from auth file
+    # read key from auth filebv
     # if not os.path.exists(ATLAS_AUTH):
     #     raise CredentialsNotFound(authfile)
     auth = open(ATLAS_AUTH)
@@ -62,7 +63,7 @@ if __name__ == "__main__":
         for measurement_id in f_handler:
             id = measurement_id.strip()
 
-            # 检查是否有 EXPERIMENT_NAME 的文件夹存在在os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)，不存在的话creat
+            # 检查是否有 EXPERIMENT_NAME 的文件夹存在在os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME)，不存在的话create
             try:
                 os.stat(os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION)))
             except:
