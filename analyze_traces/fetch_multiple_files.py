@@ -31,7 +31,7 @@ from config.config import *
 # EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的自文件夹名称
 # MEASUREMENT_ID_RECORD_FILE 为存储measurement id的.txt文档
 EXPERIMENT_NAME = '5_probes_to_alexa_top510'
-GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
+GENERATE_TYPE = 'traceroute'  # 'ping' or 'traceroute'
 IP_VERSION = 'v4'  # 'v6'
 MEASUREMENT_ID_RECORD_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME,'{0}_{1}_{2}_measurement_ids_complete.txt'.format(EXPERIMENT_NAME,GENERATE_TYPE,IP_VERSION))
 # ======================================================================================================================
