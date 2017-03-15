@@ -15,15 +15,15 @@ import pprint
 # ==========================================Section: constant variable declaration======================================
 
 # 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
-GENERATE_TYPE = 'traceroute'  # 'ping' or 'traceroute'
-IP_VERSION = 'v6'  # 'v6'
-RTT_TYPE = 'max'    # 'avg' or 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
+GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
+IP_VERSION = 'v4'  # 'v6'
+RTT_TYPE = 'avg'    # 'avg' or 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
 MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
 CALCULATE_TYPE = 'median'   # 'mean' or 'median'
 
 # EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的子文件夹名称
-EXPERIMENT_NAME = '5_probes_to_alexa_top500'
+EXPERIMENT_NAME = '5_probes_to_alexa_top510'
 # The .csv tables we need to base on
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION),'{0}_{1}.csv'.format(EXPERIMENT_NAME,RTT_TYPE))
 # The folder path, where we will store the filtered .csv tables

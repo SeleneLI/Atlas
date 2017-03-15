@@ -17,7 +17,7 @@ import scipy as sp
 import scipy.stats
 
 # ==========================================Section: constant variable declaration======================================
-EXPERIMENT_NAME = '5_probes_to_alexa_top500'
+EXPERIMENT_NAME = '5_probes_to_alexa_top510'
 RTT_TYPE = 'avg'
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
 IP_VERSION = 'v4'  # 'v6'

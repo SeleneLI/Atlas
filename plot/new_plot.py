@@ -21,8 +21,8 @@ mpl.rcParams.update({'figure.autolayout': True})
 # ==========================================Section: constant variable declaration======================================
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
-EXPERIMENT_NAME = '5_probes_to_alexa_top500'  # Needs to change
-GENERATE_TYPE = 'traceroute'  # 'ping' or 'traceroute'
+EXPERIMENT_NAME = '5_probes_to_alexa_top510'  # Needs to change
+GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
 IP_VERSION = 'v4'  # 'v6'
 RTT_TYPE = 'avg'  # 'min' or 'max'
 CALCULATE_TYPE = 'median'   # 'mean' or 'median'

@@ -11,7 +11,7 @@ import math_tool as mt
 
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
-EXPERIMENT_NAME = '5_probes_to_alexa_top500'
+EXPERIMENT_NAME = '5_probes_to_alexa_top510'
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
 IP_VERSION = 'v4'  # 'v6'
 RTT_TYPE = 'avg'
@@ -102,7 +102,7 @@ def minimum_rtt_calculator(targeted_file):
                 for index in index__rtt_list:
                     min_rtt_list.append(float(line.split(';')[index].strip()))
                 # 挑出4个probe ping同一dest时（即：每行中）RTT最小的那个
-                for index in math_tool.minimum_value_index_explorer(min_rtt_list):
+                for index in mt.minimum_value_index_explorer(min_rtt_list):
                     print index
                     min_rtt_dict[index_probe_name_dict[index + index__rtt_list[0]]] += 1
 
@@ -349,7 +349,7 @@ def corr_align_list_dimension_add(target_file, rtt_type):
         #   'D': [2.0, 6.0, 11.0, 7.3, 1.1, MEAN, 8.6]
         # }
         # 并对以上字典，调用correlation_calculator()计算平均值
-        output_dict[dst] = math_tool.correlation_calculator(input_dict[dst])
+        output_dict[dst] = mt.correlation_calculator(input_dict[dst])
 
     # 以下几行只是为了漂亮地 print 出来，注释与否与最终输出结果无关
     # pprint.pprint(output_dict)
@@ -406,7 +406,7 @@ def corr_align_list_dimension_remove(target_file, rtt_type):
             input_dict[dst][probe_name] = [x for i, x in enumerate(input_dict[dst][probe_name]) if i not in index_list]
 
         # print dst, index_list, len(input_dict[dst][probe_name])
-        output_dict[dst] = math_tool.correlation_calculator(input_dict[dst])
+        output_dict[dst] = mt.correlation_calculator(input_dict[dst])
 
     # 以下几行只是为了漂亮地 print 出来，注释与否与最终输出结果无关
     # pprint.pprint(output_dict)
