@@ -23,7 +23,7 @@ mpl.rcParams.update({'figure.autolayout': True})
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '5_probes_to_alexa_top510'  # Needs to change
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
-IP_VERSION = 'v4'  # 'v6'
+IP_VERSION = 'v6'  # 'v6'
 RTT_TYPE = 'avg'  # 'min' or 'max'
 CALCULATE_TYPE = 'median'   # 'mean' or 'median'
 
@@ -35,8 +35,8 @@ TRACEROUTE_REPORT =  os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0
 
 # From RTT_REPORT, we need to define a dict, which key = probe and value is its index in the tile of this file
 # The following 2 dicts should be difned as the same time
-probe_index_dict = {'mPlane': 2, 'FranceIX':3, 'LISP-Lab':4}    # !!!!!!!!!!!!!! Needs to check for every different experiment !!!!!!!!!!!!
-index_probe_dict = {2: 'mPlane', 3: 'FranceIX', 4: 'LISP-Lab'}    # !!!!!!!!!!!!!! Needs to check for every different experiment !!!!!!!!!!!!
+probe_index_dict = {'Gandi':2, 'mPlane':3, 'LISP-Lab':4, 'FranceIX':5, 'LIP6':6}    # !!!!!!!!!!!!!! Needs to check for every different experiment !!!!!!!!!!!!
+index_probe_dict = {2: 'Gandi', 3: 'mPlane', 4: 'LISP-Lab', 5: 'FranceIX', 6:'LIP6'}    # !!!!!!!!!!!!!! Needs to check for every different experiment !!!!!!!!!!!!
 REF_RTT_PROBE = 'FranceIX'
 COMPARED_RTT_PROBE = 'LISP-Lab'
 
@@ -419,10 +419,10 @@ if __name__ == "__main__":
 
     # smallest_continent_probe_rtt_finder()
     #
-    plot_relative_rtt_hist()
+    # plot_relative_rtt_hist()
 
     # plot_relative_rtt_bar()
 
-    # print get_raw_rtt_probes_dict()
+    plot_probe_dest_rtt_geo()
 
-    # plot_probe_dest_rtt_geo()
+    # print get_raw_rtt_probes_dict()

@@ -16,12 +16,12 @@ import numpy as np
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '5_probes_to_alexa_top510'
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
-IP_VERSION = 'v4'  # 'v6'
+IP_VERSION = 'v6'  # 'v6'
 TARGET_TRACES_PATH = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION))
 PING_MEASUREMENT_ID_LIST = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_{1}_{2}_measurement_ids_complete.txt'.format(EXPERIMENT_NAME,GENERATE_TYPE,IP_VERSION))
 
 # 想要生成的 .csv file 中 RTT 的type，若为空则全写进去
-RTT_TYPE = 'max'    # 'min' or 'avg' or 'max' or 'all'
+RTT_TYPE = 'all'    # 'min' or 'avg' or 'max' or 'all'
 
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), 'completed_traces', '{0}_{1}_completed.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
 JSON2CSV_FILE_FILTERED = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))

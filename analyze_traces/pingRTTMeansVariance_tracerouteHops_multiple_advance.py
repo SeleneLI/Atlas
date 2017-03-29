@@ -15,12 +15,12 @@ import pprint
 # ==========================================Section: constant variable declaration======================================
 
 # 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
-GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
+GENERATE_TYPE = 'traceroute'  # 'ping' or 'traceroute'
 IP_VERSION = 'v4'  # 'v6'
 RTT_TYPE = 'avg'    # 'avg' or 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
-MES_ID_LIST = ['2841000', '2841002', '2841003']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
-CALCULATE_TYPE = 'median'   # 'mean' or 'median'
+MES_ID_LIST = ['6964405']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
+CALCULATE_TYPE = 'mean'   # 'mean' or 'median'
 
 # EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的子文件夹名称
 EXPERIMENT_NAME = '5_probes_to_alexa_top510'
@@ -110,7 +110,7 @@ output =
 def clean_rtt_series(dest_probes_rtt_dict):
     index = []
     for probe in dest_probes_rtt_dict.keys():
-        index.extend([i for i, x in enumerate(dest_probes_rtt_dict[probe]) if x == '-1'])
+        index.extend([i for i, x in enumerate(dest_probes_rtt_dict[probe]) if x == '-1.0'])
 
     # index.sort()    # Let the index to remove is sorted from small to big
     # reversed_index = [i for i in reversed(index)]   # Remove the element with a high index to ensure the order don' change
@@ -351,8 +351,8 @@ def generate_report_traceroute(dest_probes_rtt_dict):
 
 if __name__ == "__main__":
     # print get_probes()
-    dict_target = {'MR_1': [2, 5, 5, -1, 3],
-                   'MR_2': [1, -1, 1, 5, 2]}
+    # dict_target = {'MR_1': [2, 5, 5, -1, 3],
+    #               'MR_2': [1, -1, 1, 5, 2]}
     # print all_probes_have_rtt(dict_target)
 
     # print clean_rtt_series(dict_target)
@@ -365,3 +365,5 @@ if __name__ == "__main__":
 
 
     generate_report_traceroute(process_traceroute(JSON_TRACES_FOLDER))
+
+
