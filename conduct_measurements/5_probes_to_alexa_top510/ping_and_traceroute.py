@@ -17,13 +17,13 @@ from config.config import *
 AUTH = os.path.join(os.path.dirname(__file__), "auth_run")
 
 MEASUREMENT_NAME = '5_probes_to_alexa_top510'
-MES_ID_PING_V4_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_ping_v4_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
-MES_ID_PING_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_ping_v6_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
-MES_ID_TRACEROUTE_V4_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v4_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
-MES_ID_TRACEROUTE_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v6_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
+# MES_ID_PING_V4_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_ping_v4_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
+MES_ID_PING_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_ping_v6_measurement_ids_complete_changed.txt'.format(MEASUREMENT_NAME))
+# MES_ID_TRACEROUTE_V4_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v4_measurement_ids_complete.txt'.format(MEASUREMENT_NAME))
+MES_ID_TRACEROUTE_V6_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, MEASUREMENT_NAME, '{0}_traceroute_v6_measurement_ids_complete_changed.txt'.format(MEASUREMENT_NAME))
 
-STRAT_TIME = '2016-12-15 00:00:00'
-STOP_TIME = '2016-12-29 23:55:00'
+STRAT_TIME = '2017-05-23 19:30:00'
+STOP_TIME = '2017-05-23 19:55:00'
 
 def ping_v4(target, mes_id_file):
     requests.packages.urllib3.disable_warnings() #disable urllib3 warnings
@@ -84,7 +84,7 @@ def ping_v4(target, mes_id_file):
     auth.close()
 
     # create measurement
-    url = "https://atlas.ripe.net/api/v1/measurement/"
+    url = "https://atlas.ripe.net/api/v2/measurements/"     # url is changed to version 2 from at least mars 2017, before is "https://atlas.ripe.net/api/v1/measurement/"
     params = {"key": key}
     headers = {"Content-Type": "application/json",
               "Accept": "application/json"}
@@ -155,7 +155,7 @@ def ping_v6(target, mes_id_file):
     auth.close()
 
     # create measurement
-    url = "https://atlas.ripe.net/api/v1/measurement/"
+    url = "https://atlas.ripe.net/api/v2/measurements/"     # url is changed to version 2 from at least mars 2017, before is "https://atlas.ripe.net/api/v1/measurement/"
     params = {"key": key}
     headers = {"Content-Type": "application/json",
               "Accept": "application/json"}
@@ -232,7 +232,7 @@ def traceroute_v4(target, mes_id_file):
     auth.close()
 
     # create measurement
-    url = "https://atlas.ripe.net/api/v1/measurement/"
+    url = "https://atlas.ripe.net/api/v2/measurements/"     # url is changed to version 2 from at least mars 2017, before is "https://atlas.ripe.net/api/v1/measurement/"
     params = {"key": key}
     headers = {"Content-Type": "application/json",
               "Accept": "application/json"}
@@ -308,7 +308,7 @@ def traceroute_v6(target, mes_id_file):
     auth.close()
 
     # create measurement
-    url = "https://atlas.ripe.net/api/v1/measurement/"
+    url = "https://atlas.ripe.net/api/v2/measurements/"     # url is changed to version 2 from at least mars 2017, before is "https://atlas.ripe.net/api/v1/measurement/"
     params = {"key": key}
     headers = {"Content-Type": "application/json",
               "Accept": "application/json"}
@@ -323,41 +323,66 @@ def traceroute_v6(target, mes_id_file):
 
 
 if __name__ == "__main__":
-    # # When you want to try with a small scall of website, use the command below
-    # target_site_v4_l = ['193.51.224.185', '140.205.220.96']
-    # target_site_v6_l = ['2001:4860:b002::68', '2607:f0d0:1002:51::4']
+    # # # When you want to try with a small scall of website, use the command below
+    # # target_site_v4_l = ['193.51.224.185', '140.205.220.96']
+    # # target_site_v6_l = ['2001:4860:b002::68', '2607:f0d0:1002:51::4']
+    #
+    # # When you want to try the whole scale of website, use the command below
+    #
+    # target_site_v4_l = []
+    # target_site_v6_l = []
+    # exp_input = 'top_510_websites_fr.csv'
+    # # exp_input = 'xak.csv'
+    # with open(exp_input) as exp_handler:
+    #     reader = csv.reader(exp_handler, delimiter=';')
+    #     next(reader)
+    #     for csv_line in map(list, reader):
+    #         target_site_v4_l.append(csv_line[1])
+    #         # print len(csv_line), csv_line
+    #         print len([i for i in csv_line if i != '']), [i for i in csv_line if i != ''] # To remove null element in list
+    #         if len([i for i in csv_line if i != '']) > 4:
+    #             target_site_v6_l.append(csv_line[4])
+    #
+    # print "target_site_v4_l:", len(target_site_v4_l), target_site_v4_l
+    # print "target_site_v6_l", len(target_site_v6_l), target_site_v6_l
 
-    # When you want to try the whole scale of website, use the command below
+    # with open(MES_ID_PING_V4_FILE, 'w') as ping_v4_file, open(MES_ID_PING_V6_FILE, 'w') as ping_v6_file, \
+    #         open(MES_ID_TRACEROUTE_V4_FILE, 'w') as traceroute_v4_file, open(MES_ID_TRACEROUTE_V6_FILE, 'w') as traceroute_v6_file:
+    #     # target_site_l = [str(e) for e in target_site_v4_l]
+    #     for target in target_site_v4_l:
+    #         try:
+    #             ping_v4(target, ping_v4_file)
+    #         except requests.exceptions.HTTPError:
+    #             print "Due to ping_v4, cannot launch mesurement for {0}".format(target)
+    #         try:
+    #             traceroute_v4(target, traceroute_v4_file)
+    #         except requests.exceptions.HTTPError:
+    #             print "Due to traceroute_v4, cannot launch mesurement for {0}".format(target)
+    #
+    #     for target in target_site_v6_l:
+    #         try:
+    #             ping_v6(target, ping_v6_file)
+    #         except requests.exceptions.HTTPError:
+    #             print "Due to ping_v6, cannot launch mesurement for {0}".format(target)
+    #         try:
+    #             traceroute_v6(target, traceroute_v6_file)
+    #         except requests.exceptions.HTTPError:
+    #             print "Due to traceroute_v6, cannot launch mesurement for {0}".format(target)
 
-    target_site_v4_l = []
+# Write for IPv6, for some reasons cannot say
     target_site_v6_l = []
-    exp_input = 'top_510_websites_fr.csv'
+    exp_input = 'top_510_websites_fr_changed.csv'
     # exp_input = 'xak.csv'
     with open(exp_input) as exp_handler:
         reader = csv.reader(exp_handler, delimiter=';')
         next(reader)
         for csv_line in map(list, reader):
-            target_site_v4_l.append(csv_line[1])
-            # print len(csv_line), csv_line
-            print len([i for i in csv_line if i != '']), [i for i in csv_line if i != ''] # To remove null element in list
-            if len([i for i in csv_line if i != '']) > 4:
-                target_site_v6_l.append(csv_line[4])
+            target_site_v6_l.append(csv_line[-3])
 
-    print "target_site_v4_l:", len(target_site_v4_l), target_site_v4_l
     print "target_site_v6_l", len(target_site_v6_l), target_site_v6_l
 
-    with open(MES_ID_PING_V4_FILE, 'w') as ping_v4_file, open(MES_ID_PING_V6_FILE, 'w') as ping_v6_file, \
-            open(MES_ID_TRACEROUTE_V4_FILE, 'w') as traceroute_v4_file, open(MES_ID_TRACEROUTE_V6_FILE, 'w') as traceroute_v6_file:
+    with open(MES_ID_PING_V6_FILE, 'w') as ping_v6_file, open(MES_ID_TRACEROUTE_V6_FILE, 'w') as traceroute_v6_file:
         # target_site_l = [str(e) for e in target_site_v4_l]
-        for target in target_site_v4_l:
-            try:
-                ping_v4(target, ping_v4_file)
-            except requests.exceptions.HTTPError:
-                print "Due to ping_v4, cannot launch mesurement for {0}".format(target)
-            try:
-                traceroute_v4(target, traceroute_v4_file)
-            except requests.exceptions.HTTPError:
-                print "Due to traceroute_v4, cannot launch mesurement for {0}".format(target)
 
         for target in target_site_v6_l:
             try:

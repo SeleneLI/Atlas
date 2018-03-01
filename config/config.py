@@ -142,13 +142,13 @@ GEO_LIST = ['Europe', 'America', 'Asia']
 font = {
     'fontname'   : 'Times New Roman',
     'color'      : 'k',
-    'fontsize'   : 60
+    'fontsize'   : 70
        }
 
 fontText = {
     'fontname'   : 'Times New Roman',
     'color'      : 'k',
-    'fontsize'   : 40
+    'fontsize'   : 60
        }
 
 font3D = {

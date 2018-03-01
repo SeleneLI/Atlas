@@ -20,13 +20,13 @@ import scipy.stats
 EXPERIMENT_NAME = '5_probes_to_alexa_top510'
 RTT_TYPE = 'avg'
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
-IP_VERSION = 'v4'  # 'v6'
+IP_VERSION = 'v6'  # 'v6'
 
 # We define a CONSTANT variable: EXP_INTERVAL, to represent the time interval between two consecutive command
 # (e.g. ping or traceroute)
 EXP_INTERVAL = 1800.0
 # We also define a CONSTANT variable: EXP_DUREE, to represent the time span of experimentation
-EXP_SPAN = 7*24.0*60*60
+EXP_SPAN = 15*24.0*60*60
 # The variable DIMENSION describe the list (containing the RTT) length
 DIMENSION = EXP_SPAN/EXP_INTERVAL
 

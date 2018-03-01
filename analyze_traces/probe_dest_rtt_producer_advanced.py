@@ -16,22 +16,24 @@ import numpy as np
 # TARGET_CSV_TRACES 为要分析的trace的文件名
 EXPERIMENT_NAME = '5_probes_to_alexa_top510'
 GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
-IP_VERSION = 'v6'  # 'v6'
+IP_VERSION = 'v4'  # 'v6'
 TARGET_TRACES_PATH = os.path.join(ATLAS_TRACES, 'Produced_traces', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION))
 PING_MEASUREMENT_ID_LIST = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, '{0}_{1}_{2}_measurement_ids_complete.txt'.format(EXPERIMENT_NAME,GENERATE_TYPE,IP_VERSION))
 
 # 想要生成的 .csv file 中 RTT 的type，若为空则全写进去
-RTT_TYPE = 'all'    # 'min' or 'avg' or 'max' or 'all'
+RTT_TYPE = 'avg'    # 'min' or 'avg' or 'max' or 'all'
 
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), 'completed_traces', '{0}_{1}_completed.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
 JSON2CSV_FILE_FILTERED = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
+JSON2CSV_FILE_NO_RESPONSE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}_no_response.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
 
 
 # We define a CONSTANT variable: EXP_INTERVAL, to represent the time interval between two consecutive command
 # (e.g. ping or traceroute)
 EXP_INTERVAL = 1800.0
 # We also define a CONSTANT variable: EXP_DUREE, to represent the time span of experimentation
-EXP_SPAN = (15*24)*60*60.0
+# EXP_SPAN = (15*24)*60*60.0
+EXP_SPAN = 24*60.0*60.0
 # The variable DIMENSION describe the list (containing the RTT) length
 DIMENSION = EXP_SPAN/EXP_INTERVAL
 
@@ -71,7 +73,7 @@ def json_file_finder(file_string):
 # input = .json file
 # output = .csv file
 def probes_dest_rtts_csv_producer(m_id_list, target_files, stored_file, rtt_type):
-    # 检查是否有 JSON2CSV_FILE 存在，不存在的话creat
+    # 检查是否有 JSON2CSV_FILE 存在，不存在的话create
     try:
         os.stat(os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), 'completed_traces'))
     except:
@@ -110,8 +112,8 @@ def probes_dest_rtts_csv_producer(m_id_list, target_files, stored_file, rtt_type
                     dest = destination_finder(json_data)
                     probes =  probes_finder(json_data)
                     rtts_probes = rtt_finder(probes_finder(json_data), json_data)
-                    # for key in rtts_probes.keys():
-                    #     print "rtts_probes[{0}]:".format(key), rtts_probes[key]
+                    for key in rtts_probes.keys():
+                        print "rtts_probes[{0}]:".format(key), rtts_probes[key]
 
 
                     for probe in probes:
@@ -263,6 +265,9 @@ def filtered_probes_rtt_producer(original_file, filtered_file):
     # print df_min[~df_min['measurement_id'].isin(drop_measure_id)]
     df_new = df[~df['measurement_id'].isin(drop_measure_id)]
 
+    # To generate to which dest that the probes have no response
+    # df_new = df[df['measurement_id'].isin(drop_measure_id)]
+
     df_new.to_csv(filtered_file, index=False, header=True, sep=';', encoding='utf-8')
 
 
@@ -279,3 +284,6 @@ if __name__ == "__main__":
     # probes_dest_rtts_csv_producer(m_id_list, json_file, JSON2CSV_FILE, RTT_TYPE)
 
     filtered_probes_rtt_producer(JSON2CSV_FILE, JSON2CSV_FILE_FILTERED)
+
+    # To generate to which dest that the probes have no response
+    # filtered_probes_rtt_producer(JSON2CSV_FILE, JSON2CSV_FILE_NO_RESPONSE)

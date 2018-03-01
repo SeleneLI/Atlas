@@ -15,14 +15,17 @@ PROBE_NAME_ID_DICT = {
 
     "FranceIX": "6118",
     "mPlane": "13842",
-    "rmd": "16958",
-    "LISP-Lab": "22341"
+    "LIP6": "2403",
+    "LISP-Lab": "22341",
+    "Gandi": "3141"
 }
 
 # EXPERIMENT_NAME 为要处理的实验的名字，因为它是存储和生成trace的子文件夹名称
 # TARGET_CSV_TRACES 为要分析的trace的文件名
-EXPERIMENT_NAME = '5_probes_to_alexa_top500'
-TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, 'TRACEROUTE_IPv4_report.csv')
+EXPERIMENT_NAME = '5_probes_to_alexa_top510'
+GENERATE_TYPE = 'traceroute'  # 'ping' or 'traceroute'
+IP_VERSION = 'v4'  # 'v6'
+TARGET_CSV_TRACES = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION), '{0}_{1}_report.csv'.format(GENERATE_TYPE, IP_VERSION))
 
 # ======================================================================================================================
 # 此函数会挑出4个probes traceroute 同一个 dest 时hops数最小的那个probe
@@ -40,14 +43,18 @@ def minimum_hops_calculator(targeted_file):
             if line.split(';')[0] == 'mesurement id':
                 index_hops = -1
                 for title in line.split(';'):
+                    print "title ==", title
                     index_hops += 1
                     # 找到含有'avg'的那几列
-                    if re.match(r'hops', title):
+                    if re.match(r'hop', title):
                         min_hops_dict[title.split(' ')[3].strip()] = 0
+                        print "min_hops_dict =", min_hops_dict
                         # 用 index_variance_list 来记录含有 variance 值的是哪几列
                         index__hops_list.append(index_hops)
+                        print "index__hops_list =", index__hops_list
                         # index 和 probe name 的对应关系
                         index_probe_name_dict[index_hops] = title.split(' ')[3].strip()
+                        print "index_probe_name_dict =", index_probe_name_dict
             else:
                 min_hops_list = []
                 # 在每行中，都需要对每个目标probe所产生的hops数值依次写入可记录 min_hops 的字典中
@@ -75,4 +82,4 @@ def minimum_hops_calculator(targeted_file):
 
 
 if __name__ == "__main__":
-    print minimum_hops_calculator(TARGET_CSV_TRACES)
+    print "min:", minimum_hops_calculator(TARGET_CSV_TRACES)

@@ -12,23 +12,33 @@ import numpy as np
 import glob
 import json
 import pprint
+from rtt.localutils import pathtools
+import difflib
+from geoip import geolite2
+
 # ==========================================Section: constant variable declaration======================================
 
 # 需要 generate ping report 还是 traceroute report，写 'PING' 或 'TRACEROUTE'
-GENERATE_TYPE = 'traceroute'  # 'ping' or 'traceroute'
+GENERATE_TYPE = 'ping'  # 'ping' or 'traceroute'
 IP_VERSION = 'v4'  # 'v6'
 RTT_TYPE = 'avg'    # 'avg' or 'min' or 'max'，当 GENERATE_TYPE = 'TRACEROUTE' 时忽略此变量，什么都不用更改
 MES_ID_TYPE = 'txt'     # 'list' or 'txt'
 MES_ID_LIST = ['6964405']    # 只有当 MES_ID_TYPE = 'list' 时，此参数才有用。即指定处理哪几个实验
-CALCULATE_TYPE = 'mean'   # 'mean' or 'median'
+CALCULATE_TYPE = 'median'   # 'mean' or 'median'
+REF_RTT_PROBE = 6118
+COMPARED_RTT_PROBE = 22341
 
 # EXPERIMENT_NAME 为实验起个名字，会作为存储和生成trace的子文件夹名称
 EXPERIMENT_NAME = '5_probes_to_alexa_top510'
 # The .csv tables we need to base on
 JSON2CSV_FILE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION),'{0}_{1}.csv'.format(EXPERIMENT_NAME,RTT_TYPE))
+JSON2CSV_FILE_NO_RESPONSE = os.path.join(ATLAS_TRACES, 'json2csv', EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}_no_response.csv'.format(EXPERIMENT_NAME, RTT_TYPE))
+
 # The folder path, where we will store the filtered .csv tables
 FILTERED_TRACE_PATH = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION))
+
 DEST_FILE = os.path.join(ATLAS_CONDUCT_MEASUREMENTS, EXPERIMENT_NAME, 'top_510_websites_fr.csv')
+TRACEROUTE_REPORT = os.path.join(ATLAS_FIGURES_AND_TABLES, EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE,IP_VERSION), '{0}_{1}_report'.format(GENERATE_TYPE,IP_VERSION))
 
 # ==========================================Section: functions declaration======================================
 # Get the probes_list from JSON2CSV_FILE
@@ -199,7 +209,8 @@ def generate_report(dest_probes_rtt_dict):
 
     clean_file = os.path.join(FILTERED_TRACE_PATH, '{0}_{1}_report_{2}_{3}.csv'.format(GENERATE_TYPE,IP_VERSION,RTT_TYPE,CALCULATE_TYPE))
 
-    probes_list = get_probes()
+    # probes_list = get_probes()
+    probes_list = PROBE_ID_NAME_DICT.values()
     dest_country_continent = get_country_continent()
 
     with open(clean_file, 'wb') as f_handler:
@@ -253,7 +264,7 @@ def retrieve_traversed_ip(results):
     return res
 
 
-def process_traceroute(json_traces_folder):
+def process_traceroute(json_traces_folder, hop_number=True):
 
     files = glob.glob(json_traces_folder)
 
@@ -263,19 +274,26 @@ def process_traceroute(json_traces_folder):
         with open(trace_p, 'r') as f_handler:
             json_data = json.load(f_handler)
             if len(json_data) != 0:
-                for record in json_data:
+                for index, record in enumerate(json_data):
                     msm_id = record['msm_id']
                     prb_id = record['prb_id']
                     dst_addr = record['dst_addr']
-                    # print "record", record
                     hop_list = record['result']
-                    hop_ip_list = [retrieve_traversed_ip(hop['result']) for hop in hop_list]
-                    # frequent_route_list.append("->".join(hop_ip_list))
-                    # we can rely the most_common() method to find out the most occurrences of routes
-                    # The output of most_common() is a list of tuple
-                    #     print Counter(frequent_route_list).most_common(1)[0][0]
-                    # hops_number = len(Counter(frequent_route_list).most_common(1)[0][0].split("->"))
-                    print msm_id, dst_addr, prb_id, "->".join(hop_ip_list)
+                    hop_ip_list = [retrieve_traversed_ip(hop['result']) for hop in hop_list if 'result' in hop.keys()]
+                    '''
+                    {"af":4,"dst_addr":"144.160.155.43","dst_name":"144.160.155.43","endtime":1482584785,
+                    "from":"217.70.181.250","fw":4740,"group_id":6963985,"lts":486,"msm_id":6963985,
+                    "msm_name":"Traceroute","paris_id":4,"prb_id":3141,"proto":"ICMP",
+                    "result":[{"error":"connect failed: Network is unreachable","hop":1}],
+                    "size":48,"src_addr":"217.70.181.250",
+                    "timestamp":1482584785,"type":"traceroute"}
+                    '''
+                    ## frequent_route_list.append("->".join(hop_ip_list))
+                    ## we can rely the most_common() method to find out the most occurrences of routes
+                    ## The output of most_common() is a list of tuple
+                    ##     print Counter(frequent_route_list).most_common(1)[0][0]
+                    ## hops_number = len(Counter(frequent_route_list).most_common(1)[0][0].split("->"))
+                    # print msm_id, dst_addr, prb_id, "->".join(hop_ip_list)
                     if (msm_id, dst_addr) in hops_count_dict.keys():
                         if prb_id not in hops_count_dict[(msm_id, dst_addr)].keys():
                             hops_count_dict[(msm_id, dst_addr)][prb_id] = ["->".join(hop_ip_list)]
@@ -284,28 +302,184 @@ def process_traceroute(json_traces_folder):
                     else:
                         hops_count_dict[(msm_id, dst_addr)] = {}
                         hops_count_dict[(msm_id, dst_addr)][prb_id] = ["->".join(hop_ip_list)]
+            else:
+                # print "!!!!!!!!!!!!!!!!!", trace_p, " is empty !!!!!!!!!!!!!!!!!"
+                pass
 
     for key, value in hops_count_dict.iteritems():
         for prb_id, hop_ip_list in value.iteritems():
-            hops_number = len(Counter(hop_ip_list).most_common(1)[0][0].split("->"))
+            if hop_number:
+                hops_number = len(Counter(hop_ip_list).most_common(1)[0][0].split("->"))
+            else:
+                hops_number = Counter(hop_ip_list).most_common(1)[0][0].split("->")
             value[prb_id] = hops_number
 
-    pprint.pprint(hops_count_dict)
+    # pprint.pprint(hops_count_dict)
     return hops_count_dict
 
 
 
-def generate_report_traceroute(dest_probes_rtt_dict):
+def ip_to_as(json_traces_folder):
+    dest_probe_ipList = process_traceroute(json_traces_folder, False)
+    dest_probe_asList = {}
+    dest_probe_countryList = {}
 
+    for dest in dest_probe_ipList.keys():
+        print "dest ==>", dest
+        dest_probe_asList[dest] = {}
+        dest_probe_countryList[dest] = {}
+        for probe in dest_probe_ipList[dest].keys():
+
+            if probe == REF_RTT_PROBE:
+                # Full AS-path
+                # dest_probe_asList[dest][probe] = [pathtools.ip2asn.lookup(ip) for ip in dest_probe_ipList[dest][probe]]
+                # AS-path removing 'None', 'Invalid IP address' and the consecutively same ones
+                dest_probe_asList[dest][probe] = []
+                dest_probe_countryList[dest][probe] = []
+                for ip in dest_probe_ipList[dest][probe]:
+                    as_current = pathtools.ip2asn.lookup(ip)
+                    if len(dest_probe_asList[dest][probe]) == 0:
+                        if (as_current != 'Invalid IP address') and (as_current != None):
+                            dest_probe_asList[dest][probe].append(as_current)
+                            print "ip ==>", ip
+                            dest_probe_countryList[dest][probe].append(find_IP_geolocation(ip))
+
+                    elif (as_current != dest_probe_asList[dest][probe][-1]) and (as_current !=  None) and (as_current != 'Invalid IP address'):
+                        dest_probe_asList[dest][probe].append(as_current)
+                        print "ip ==>", ip
+                        dest_probe_countryList[dest][probe].append(find_IP_geolocation(ip))
+            elif probe == COMPARED_RTT_PROBE:
+                # Full AS-path
+                # dest_probe_asList[dest][probe] = [pathtools.ip2asn.lookup(ip) for ip in dest_probe_ipList[dest][probe]]
+                # AS-path removing 'None', 'Invalid IP address' and the consecutively same ones
+                dest_probe_asList[dest][probe] = []
+                dest_probe_countryList[dest][probe] = []
+                for ip in dest_probe_ipList[dest][probe]:
+                    as_current = pathtools.ip2asn.lookup(ip)
+                    if len(dest_probe_asList[dest][probe]) == 0:
+                        if (as_current != 'Invalid IP address') and (as_current != None):
+                            dest_probe_asList[dest][probe].append(as_current)
+                            print "ip ==>", ip
+                            dest_probe_countryList[dest][probe].append(find_IP_geolocation(ip))
+                    elif (as_current != dest_probe_asList[dest][probe][-1]) and (as_current !=  None) and (as_current != 'Invalid IP address'):
+                        dest_probe_asList[dest][probe].append(as_current)
+                        print "ip ==>", ip
+                        dest_probe_countryList[dest][probe].append(find_IP_geolocation(ip))
+
+    print "dest_probe_asList ==>"
+    pprint.pprint(dest_probe_asList)
+    print "dest_probe_countryList ==>"
+    pprint.pprint(dest_probe_countryList)
+
+    ref_index = 0
+    com_index = 0
+    both_index = 0
+    for dest in dest_probe_countryList.keys():
+        if ('US' in dest_probe_countryList[dest][REF_RTT_PROBE]) and ('US' not in dest_probe_countryList[dest][COMPARED_RTT_PROBE]):
+            ref_index += 1
+        elif ('US' not in dest_probe_countryList[dest][REF_RTT_PROBE]) and ('US' in dest_probe_countryList[dest][COMPARED_RTT_PROBE]):
+            com_index += 1
+        elif ('US' not in dest_probe_countryList[dest][REF_RTT_PROBE]) and ('US' not in dest_probe_countryList[dest][COMPARED_RTT_PROBE]):
+            both_index += 1
+
+    print "ref_index =", ref_index
+    print "com_index =", com_index
+    print "both_index =", both_index
+
+    return dest_probe_asList, dest_probe_countryList
+
+
+def common_path_calculator(json_traces_folder):
+    dest_probe_as_list, dest_probe_countryList = ip_to_as(json_traces_folder)
+    common_path_dict = {}
+    for dest in dest_probe_as_list.keys():
+        as_path_1 = dest_probe_as_list[dest][REF_RTT_PROBE]
+        as_path_2 = dest_probe_as_list[dest][COMPARED_RTT_PROBE]
+        as_path_1_reverse = as_path_1[::-1]
+        as_path_2_reverse = as_path_2[::-1]
+        index = 0
+        print dest
+        while as_path_1_reverse[index] == as_path_2_reverse[index]:
+            index += 1
+            if index == min(len(as_path_1_reverse), len(as_path_2_reverse)):
+                break
+
+        print "To", dest, "common hops =", index
+        common_path_dict[dest] = (index, len(as_path_1_reverse), len(as_path_2_reverse), dest_probe_countryList[dest][REF_RTT_PROBE], dest_probe_countryList[dest][COMPARED_RTT_PROBE])
+
+    mean_common_hops = mean([i[0] for i in common_path_dict.values()])
+
+    print "mean_common_hops ==>"
+    print mean_common_hops
+
+    print "common_path_dict ==>"
+    print common_path_dict
+
+    return common_path_dict
+
+
+def similarity_calculator(json_traces_folder):
+    dest_probe_as_list, dest_probe_countryList = ip_to_as(json_traces_folder)
+    similarity_dict = {}
+    for dest in dest_probe_as_list.keys():
+        as_path_1 = dest_probe_as_list[dest][REF_RTT_PROBE]
+        as_path_2 = dest_probe_as_list[dest][COMPARED_RTT_PROBE]
+        sm = difflib.SequenceMatcher(None, as_path_1, as_path_2)
+        similarity_dict[dest] = sm.ratio()
+
+    print "Avg similarity", mean(similarity_dict.values())
+    return similarity_dict
+
+
+def generate_report_as(target_dict):
+    with open("xxx.csv", 'w') as f_handler:
+        csv_writter = csv.writer(f_handler, delimiter=';')
+        title_line = ['measurement_id','destination','common_hops_num','FranceIX_hops_num','LISP-Lab_hops_num','FranceIX_country_path','LISP-Lab_country_path','Country','Continent']
+        csv_writter.writerow(title_line)
+
+        dest_country_continent = get_country_continent()
+
+        for key, value in target_dict.iteritems():
+            csv_row = []
+            for id in key:
+                csv_row.append(id)
+            for number in value:
+                csv_row.append(number)
+
+            csv_row.extend(dest_country_continent[key[1]])
+
+            csv_writter.writerow(csv_row)
+
+
+def find_IP_geolocation(ip):
+    match = geolite2.lookup(ip)
+
+    if match is not None:
+        country = match.country
+        continent = match.continent
+    else:
+        country = '/'
+        continent = '/'
+
+    print country
+    print continent
+
+    return country
+
+
+
+
+def generate_report_traceroute(dest_probes_rtt_dict):
 
     try:
         os.stat(FILTERED_TRACE_PATH)
     except:
         os.makedirs(FILTERED_TRACE_PATH)
 
-    clean_file = os.path.join(FILTERED_TRACE_PATH, '{0}_{1}_report_{2}_{3}.csv'.format(GENERATE_TYPE,IP_VERSION,RTT_TYPE,CALCULATE_TYPE))
+    clean_file = os.path.join(FILTERED_TRACE_PATH, '{0}_{1}_report.csv'.format(GENERATE_TYPE,IP_VERSION))
 
-    probes_list = get_probes()
+    # probes_list = get_probes()
+    probes_list = PROBE_ID_NAME_DICT.values()
 
     dest_country_continent = get_country_continent()
 
@@ -318,19 +492,24 @@ def generate_report_traceroute(dest_probes_rtt_dict):
         csv_writter.writerow(csv_title)
 
         for key, value in dest_probes_rtt_dict.iteritems():
-            print key
-            pprint.pprint(value)
+            # pprint.pprint(value)
             csv_row = []
-            print key
             current_m_id, current_dest = key[0], key[1]
             csv_row.append(current_m_id)
             csv_row.append(current_dest)
             hops = []
             for probe in probes_list:
                 for prb_id, prb_name in PROBE_ID_NAME_DICT.iteritems():
+                    print "prb_name:", prb_name
+                    print "probe:", probe
+                    print "prb_id:", type(prb_id)
+                    print "value.keys()", value.keys()
                     if prb_name == probe:
-                        # rtt_tmp = [float(element) for element in value[int(prb_id)]]
-                        hops.append(value[int(prb_id)])
+                        if int(prb_id) in [int(i) for i in value.keys()]:
+                            # rtt_tmp = [float(element) for element in value[int(prb_id)]]
+                            hops.append(value[int(prb_id)])
+                        else:
+                            hops.append('/') # for a traceroute having no result
             csv_row.extend(hops)
 
             try:
@@ -340,7 +519,6 @@ def generate_report_traceroute(dest_probes_rtt_dict):
                 print "The following measurement_id and IPv6 are not in top_510_websites_fr.csv:"
                 print current_m_id
                 print key[1]
-
 
 
 
@@ -359,11 +537,17 @@ if __name__ == "__main__":
 
     # print get_clean_traces().keys()[0]
 
-    # generate_report(get_clean_traces())
+    generate_report(get_clean_traces())
 
-    JSON_TRACES_FOLDER = os.path.join("..", "traces", "Produced_traces", EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION), "*.json")
+    # JSON_TRACES_FOLDER = os.path.join("..", "traces", "Produced_traces", EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION), "*.json")
 
+    # JSON_TRACES_FOLDER = os.path.join("..", "traces", "Produced_traces", EXPERIMENT_NAME, '{0}_{1}'.format(GENERATE_TYPE, IP_VERSION), "6964414.json")
+    # generate_report_traceroute(process_traceroute(JSON_TRACES_FOLDER))
+    # process_traceroute(JSON_TRACES_FOLDER, False)
+    # ip_to_as(JSON_TRACES_FOLDER)
+    # print similarity_calculator(JSON_TRACES_FOLDER)
 
-    generate_report_traceroute(process_traceroute(JSON_TRACES_FOLDER))
+    # generate_report_as(common_path_calculator(JSON_TRACES_FOLDER))
+
 
 
